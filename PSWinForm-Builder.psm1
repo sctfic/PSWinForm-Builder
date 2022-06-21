@@ -10,6 +10,7 @@
         KeyPreview  = $true
         Size        = '360, 480'
         # ... Form property fields ...
+        Icon            = [System.Drawing.Icon][System.IO.MemoryStream] [System.Convert]::FromBase64String('Base64 *.Ico') 
         Events      = @{
             Load    = [Scriptblock]{'ScriptBlock Code'}
             KeyDown = [Scriptblock]{
@@ -56,12 +57,13 @@ function New-WinForm () {
 
     # Get forms definition from file
     $FormDef = Import-PowerShellDataFile  $DefinitionFile -SkipLimitCheck
+    $Script:ControlHandler = @{}
     
     if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
 
     } else {
         Write-Verbose "[Form]"
-        Write-LogStep '[Form]',"" ok
+        # Write-LogStep '[Form]',"" ok
         $Form = New-WinFormControl -Type 'Form' -Definition $FormDef
     }
 
@@ -78,15 +80,27 @@ function New-WinFormControl {
         $Definition,
         $tabs=''
     )
-    $WinFormControl = New-Object System.Windows.Forms.$Type
+    if ($Definition.Name) {
+        $Name = $Definition.Name
+    } else {
+        $i=0
+        $Name = "${Type}_$i"
+        while ($Script:ControlHandler[$Name]) {
+            $i++
+            $Name = "${Type}_$i"
+        }
+    }
+    Write-Verbose "Script:ControlHandler[$Name]"
+
+    $Script:ControlHandler[$Name] = New-Object System.Windows.Forms.$Type
     # Construction des Properties
-    # $ValidProperties = $WinFormControl.PSobject.Properties.Name
+    # $ValidProperties = $Script:ControlHandler[$Name].PSobject.Properties.Name
     foreach ($Key in $Definition.Keys) {
         try {
             if (@('Events','Childrens','ControlType') -notcontains $Key) {
                 Write-Verbose "$Tabs+-- $Key = $($Definition.$Key)"
-                $WinFormControl.$Key = $Definition.$Key
-                Write-LogStep $Key,$($Definition.$Key) ok
+                $Script:ControlHandler[$Name].$Key = $Definition.$Key
+                # Write-LogStep $Key,$($Definition.$Key) ok
             }
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
@@ -94,12 +108,12 @@ function New-WinFormControl {
     }
 
     # Construction des Events
-    # $ValidEvents = $WinFormControl.PSobject.Methods.Name
+    # $ValidEvents = $Script:ControlHandler[$Name].PSobject.Methods.Name
     foreach ($Evt in $Definition.Events.Keys) {
         try {
             Write-Verbose "$Tabs+-- On_$($Evt)()"
-            $WinFormControl."Add_$($Evt)"( $Definition.Events.$Evt )
-            Write-LogStep 'Event',"On_$($Evt)" ok
+            $Script:ControlHandler[$Name]."Add_$($Evt)"( $Definition.Events.$Evt )
+            # Write-LogStep 'Event',"On_$($Evt)" ok
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
         }
@@ -109,14 +123,14 @@ function New-WinFormControl {
     foreach ($Children in $Definition.Childrens) {
         try {
             Write-Verbose "$tabs[$($Children.ControlType)]"
-            $Control = New-WinFormControl -Type $Children.ControlType -Definition $Children -Tabs "   $Tabs"
-            $WinFormControl.Controls.Add($Control)
-            Write-LogStep "[$($Children.ControlType)]",'' ok
+            $Script:ControlHandler[$Name].Controls.Add((New-WinFormControl -Type $Children.ControlType -Definition $Children -Tabs "   $Tabs"))
+            # Write-LogStep "[$($Children.ControlType)]",'' ok
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
         }
     }
-    $WinFormControl
+
+    $Script:ControlHandler[$Name]
 }
 
 
@@ -133,7 +147,7 @@ if (Get-Module PsWrite) {
     function Script:Write-logstep {
         param ( [string[]]$messages, $mode, $MaxWidth, $EachLength, $prefixe, $logTrace )
         Write-Verbose "$($messages -join(',')) [$mode]"
-        Write-LogStep '',"" ok
+        # Write-LogStep '',"" ok
     }
 }
 
@@ -150,10 +164,10 @@ if (Get-Module PsWrite) {
 
 function Invoke-EventTracer {
     param (
-        $Obj,
-        $name
+        $ObjThis,
+        $EventType
     )
-    $Obj | Write-Object
-    Write-Host $name -ForegroundColor Magenta
+    # $ObjThis | Write-Object
+    Write-Host $ObjThis.name,$EventType -ForegroundColor Magenta
 }
 
