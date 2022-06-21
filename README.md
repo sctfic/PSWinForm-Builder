@@ -6,7 +6,7 @@ Is a PowerShell module to load a Windows.Forms from a PSD1 definition file, all 
 ## Usage
 
     ipmo PSWinForm-Builder
-    New-WinForm C:\Users\alopez\Documents\PowerShell\Modules\PSWinForm-Builder\DemoGui_0.psd1 -Show
+    New-WinForm .\DemoGui.psd1 -Show
 
 ## PSD1 file must habe following structure
 
