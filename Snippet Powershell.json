@@ -14,30 +14,30 @@
 			"    Icon        = [System.Drawing.Icon] [System.IO.MemoryStream] [System.Convert]::FromBase64String('')",
 			"    Events      = @{",
 			"        Load    = [Scriptblock]{ # Event",
-            "            Add-Type -Name Window -Namespace Console -MemberDefinition '",
-            "            [DllImport('Kernel32.dll')]",
-            "                public static extern IntPtr GetConsoleWindow();",
-            "            [DllImport('user32.dll')]",
-            "                public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'",
-            "            $consolePtr = [Console.Window]::GetConsoleWindow()",
-            "            [Console.Window]::ShowWindow($consolePtr,0) | Out-Null",
+			"            Add-Type -Name Window -Namespace Console -MemberDefinition '",
+			"            [DllImport('Kernel32.dll')]",
+			"                public static extern IntPtr GetConsoleWindow();",
+			"            [DllImport('user32.dll')]",
+			"                public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'",
+			"            $consolePtr = [Console.Window]::GetConsoleWindow()",
+			"            [Console.Window]::ShowWindow($consolePtr,0) | Out-Null",
 			"        }",
 			"        KeyDown = [Scriptblock]{ # Event",
 			"            if ($_.KeyCode -eq 'Escape') {",
 			"                $this.Close()",
 			"            }",
 			"        }",
-            "        OnClosing = [Scriptblock]{ # Event",
-            "            [Console.Window]::ShowWindow($consolePtr,9) | Out-Null",
+			"        OnClosing = [Scriptblock]{ # Event",
+			"            [Console.Window]::ShowWindow($consolePtr,9) | Out-Null",
 			"        }",
 			"    }",
 			"    Childrens   = @(",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "WinForm structure for descriptor file WinForms.psd1"
 	},
-    "GroupBox": {
+			"GroupBox": {
 		"prefix": "GroupBox",
 		"body": [
             "@{",
@@ -56,7 +56,7 @@
 		],
 		"description": "GroupBox structure for descriptor file WinForms.psd1"
 	},
-    "TabControl": {
+			"TabControl": {
 		"prefix": "TabControl",
 		"body": [
             "@{",
@@ -67,12 +67,12 @@
 			"    Events      = @{",
 			"        Load    = [Scriptblock]{ # Event",
 			"        }",
-            "        SelectedIndexChanged = [Scriptblock]{ # Event",
-            "            $this.SelectedTab.Name",
+			"        SelectedIndexChanged = [Scriptblock]{ # Event",
+			"            $this.SelectedTab.Name",
 			"        }",
 			"    }",
 			"    Childrens   = @(",
-            "        @{",
+			"        @{",
 			"            ControlType = 'TabPage'",
 			"            Name        = 'TabPage_${2:Tab1}'",
 			"            Text        = '${2:Tab1}'",
@@ -83,8 +83,8 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        },",
-            "        @{",
+			"        },",
+			"        @{",
 			"            ControlType = 'TabPage'",
 			"            Name        = 'TabPage_${2:Tab2}'",
 			"            Text        = '${2:Tab2}'",
@@ -95,13 +95,13 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        }",
+			"        }",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "TabControl structure for descriptor file WinForms.psd1"
 	},
-    "TabPage": {
+			"TabPage": {
 		"prefix": "TabPage",
 		"body": [
             "@{",
@@ -115,11 +115,11 @@
 			"    }",
 			"    Childrens   = @(",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "TabPage structure for descriptor file WinForms.psd1"
 	},
-    "TreeView": {
+			"TreeView": {
 		"prefix": "TreeView",
 		"body": [
             "@{",
@@ -127,87 +127,87 @@
 			"    Name        = 'TreeView_${1:label}'",
 			"    Dock        = 'Fill'",
 			"    Events      = @{",
-            "        BeforeExpand    = [Scriptblock]{ # Event",
+			"        BeforeExpand    = [Scriptblock]{ # Event",
 			"        }",
-            "        DoubleClick    = [Scriptblock]{ # Event",
+			"        DoubleClick    = [Scriptblock]{ # Event",
 			"        }",
 			"    }",
 			"    Childrens   = @(",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "TreeView structure for descriptor file WinForms.psd1"
 	},
-    "ListView": {
+			"ListView": {
 		"prefix": "ListView",
 		"body": [
             "@{",
 			"    ControlType      = 'ListView'",
 			"    Name             = 'ListView_${1:label}'",
 			"    Dock             = 'Fill'",
-            "    Activation       = 'OneClick'",
-            "    FullRowSelect    = 'True'",
-            "    HoverSelection   = 'True'",
-            "    ShowGroups       = 'True'",
-            "    ShowItemToolTips = 'True'",
-            "    View             = 'Details'",
-            "    Events      = @{",
+			"    Activation       = 'OneClick'",
+			"    FullRowSelect    = 'True'",
+			"    HoverSelection   = 'True'",
+			"    ShowGroups       = 'True'",
+			"    ShowItemToolTips = 'True'",
+			"    View             = 'Details'",
+			"    Events      = @{",
 			"        Click    = [Scriptblock]{ # Event",
 			"        }",
-            "        DoubleClick    = [Scriptblock]{ # Event",
+			"        DoubleClick    = [Scriptblock]{ # Event",
 			"        }",
 			"    }",
 			"    Childrens   = @(",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "ListView structure for descriptor file WinForms.psd1"
 	},
-    "DataGridView": {
+			"DataGridView": {
 		"prefix": "DataGridView",
 		"body": [
             "@{",
 			"    ControlType      = 'DataGridView'",
 			"    Name             = 'DataGridView_${1:label}'",
 			"    Dock             = 'Fill'",
-            "    CellBorderStyle  = 'SingleHorizontal'",
-            "    SelectionMode    = 'FullRowSelect'",
-            "    RowHeadersVisible = 'False'",
-            "    AllowUserToAddRows = 'False'",
-            "    AllowUserToDeleteRows = 'False'",
-            "    View             = 'Details'",
-            "    Events      = @{",
+			"    CellBorderStyle  = 'SingleHorizontal'",
+			"    SelectionMode    = 'FullRowSelect'",
+			"    RowHeadersVisible = 'False'",
+			"    AllowUserToAddRows = 'False'",
+			"    AllowUserToDeleteRows = 'False'",
+			"    View             = 'Details'",
+			"    Events      = @{",
 			"        Load    = [Scriptblock]{ # Event",
-            "            $this.AlternatingRowsDefaultCellStyle.BackColor = 'AliceBlue'",
-            "            $this.RowTemplate.Height = 20",
-            "            $Cols = @(",
-            "                [System.Windows.Forms.DataGridViewTextBoxColumn]@{",
-            "                    'HeaderText' = 'Col1'",
-            "                    'Width' = 140",
-            "                }",
-            "                [System.Windows.Forms.DataGridViewTextBoxColumn]@{",
-            "                    'HeaderText' = 'Col2'",
-            "                    'Width' = 100",
-            "                }",
-            "                [System.Windows.Forms.DataGridViewTextBoxColumn]@{",
-            "                    'HeaderText' = 'Col3'",
-            "                    'Width' = 40",
-            "                }",
-            "            )",
-            "            $Cols | %{[System.Void]$this.Columns.Add($_)}",
+			"            $this.AlternatingRowsDefaultCellStyle.BackColor = 'AliceBlue'",
+			"            $this.RowTemplate.Height = 20",
+			"            $Cols = @(",
+			"                [System.Windows.Forms.DataGridViewTextBoxColumn]@{",
+			"                    'HeaderText' = 'Col1'",
+			"                    'Width' = 140",
+			"                }",
+			"                [System.Windows.Forms.DataGridViewTextBoxColumn]@{",
+			"                    'HeaderText' = 'Col2'",
+			"                    'Width' = 100",
+			"                }",
+			"                [System.Windows.Forms.DataGridViewTextBoxColumn]@{",
+			"                    'HeaderText' = 'Col3'",
+			"                    'Width' = 40",
+			"                }",
+			"            )",
+			"            $Cols | %{[System.Void]$this.Columns.Add($_)}",
 			"        }",
 			"        Click    = [Scriptblock]{ # Event",
 			"        }",
-            "        DoubleClick    = [Scriptblock]{ # Event",
+			"        DoubleClick    = [Scriptblock]{ # Event",
 			"        }",
 			"    }",
 			"    Childrens   = @(",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "DataGridView structure for descriptor file WinForms.psd1"
 	},
-    "MenuStrip": {
+			"MenuStrip": {
 		"prefix": "MenuStrip",
 		"body": [
             "@{",
@@ -220,7 +220,7 @@
 			"        }",
 			"    }",
 			"    Childrens   = @(",
-            "        @{",
+			"        @{",
 			"            ControlType = 'ToolStripMenuItrm'",
 			"            Name        = 'ToolStripMenuItrm_${1:item1}'",
 			"            ShortcutKeys = 'Ctrl+X'",
@@ -232,8 +232,8 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        },",
-            "        @{",
+			"        },",
+			"        @{",
 			"            ControlType = 'ToolStripMenuItrm'",
 			"            Name        = 'ToolStripMenuItrm_${1:item2}'",
 			"            ShortcutKeys = 'Ctrl+S'",
@@ -245,13 +245,13 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        }",
+			"        }",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "MenuStrip structure for descriptor file WinForms.psd1"
 	},
-    "ToolStripMenuItrm": {
+			"ToolStripMenuItrm": {
 		"prefix": "ToolStripMenuItrm",
 		"body": [
             "@{",
@@ -265,7 +265,7 @@
 			"        }",
 			"    }",
 			"    Childrens   = @(",
-            "        @{",
+			"        @{",
 			"            ControlType = 'ToolStripMenuItrm'",
 			"            Name        = 'ToolStripMenuItrm_${1:item1}'",
 			"            ShortcutKeys = 'Ctrl+X'",
@@ -277,8 +277,8 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        },",
-            "        @{",
+			"        },",
+			"        @{",
 			"            ControlType = 'ToolStripMenuItrm'",
 			"            Name        = 'ToolStripMenuItrm_${1:item2}'",
 			"            ShortcutKeys = 'Ctrl+S'",
@@ -290,23 +290,23 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        }",
+			"        }",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "ToolStripMenuItrm structure for descriptor file WinForms.psd1"
 	},
-    "ToolStripSeparator": {
+			"ToolStripSeparator": {
 		"prefix": "ToolStripSeparator",
 		"body": [
             "@{",
 			"    ControlType = 'ToolStripSeparator'",
 			"    Name        = 'ToolStripSeparator_${1:label}'",
-            "}"
+			"}"
 		],
 		"description": "ToolStripSeparator structure for descriptor file WinForms.psd1"
 	},
-    "ContextMenuStrip": {
+			"ContextMenuStrip": {
 		"prefix": "ContextMenuStrip",
 		"body": [
             "@{",
@@ -319,7 +319,7 @@
 			"        }",
 			"    }",
 			"    Childrens   = @(",
-            "        @{",
+			"        @{",
 			"            ControlType = 'ToolStripMenuItrm'",
 			"            Name        = 'ToolStripMenuItrm_${1:item1}'",
 			"            ShortcutKeys = 'Ctrl+X'",
@@ -331,12 +331,12 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        },",
-            "        @{",
+			"        },",
+			"        @{",
 			"            ControlType = 'ToolStripSeparator'",
 			"            Name        = 'ToolStripSeparator_${1:label}'",
-            "        }",
-            "        @{",
+			"        }",
+			"        @{",
 			"            ControlType = 'ToolStripMenuItrm'",
 			"            Name        = 'ToolStripMenuItrm_${1:item2}'",
 			"            ShortcutKeys = 'Ctrl+X'",
@@ -348,13 +348,13 @@
 			"            }",
 			"            Childrens   = @(",
 			"            }",
-            "        },",
+			"        },",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "ContextMenuStrip structure for descriptor file WinForms.psd1"
 	},
-    "Checkbox": {
+			"Checkbox": {
 		"prefix": "Checkbox",
 		"body": [
             "@{",
@@ -366,11 +366,11 @@
 			"        CheckedChanged    = [Scriptblock]{ # Event",
 			"        }",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "Checkbox structure for descriptor file WinForms.psd1"
 	},
-    "Button": {
+			"Button": {
 		"prefix": "Button",
 		"body": [
             "@{",
@@ -382,11 +382,11 @@
 			"        Click    = [Scriptblock]{ # Event",
 			"        }",
 			"    }",
-            "}"
+			"}"
 		],
 		"description": "Button structure for descriptor file WinForms.psd1"
 	},
-    "ProgressBar": {
+			"ProgressBar": {
 		"prefix": "ProgressBar",
 		"body": [
             "@{",
@@ -395,7 +395,7 @@
 			"    Style        = 'Marquee'",
 			"    Dock        = 'Top'",
 			"    Heihhy        = 5",
-            "}"
+			"}"
 		],
 		"description": "ProgressBar structure for descriptor file WinForms.psd1"
 	}
