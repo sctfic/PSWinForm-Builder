@@ -52,11 +52,21 @@ function New-WinForm () {
             ValueFromPipelineByPropertyName = $true,
             HelpMessage = 'File contenaining form definition')]
         [string]$DefinitionFile,
-        [switch]$Show
+        [switch]$ShowWinForms,
+        [switch]$HideConsole
     )
+    if ($HideConsole -and $ShowWinForms) {
+        Add-Type -Name Window -Namespace Console -MemberDefinition '
+        [DllImport("Kernel32.dll")]
+            public static extern IntPtr GetConsoleWindow();
+        [DllImport("user32.dll")]
+            public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
+        $consolePtr = [Console.Window]::GetConsoleWindow()
+        [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
+    }
 
     # Get forms definition from file
-    $FormDef = Import-PowerShellDataFile  $DefinitionFile -SkipLimitCheck
+    $FormDef = Import-PowerShellDataFile $DefinitionFile -SkipLimitCheck
     $Script:ControlHandler = @{}
     
     if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
@@ -67,8 +77,12 @@ function New-WinForm () {
         $Form = New-WinFormControl -Type 'Form' -Definition $FormDef
     }
 
-    if ($Show) {
+    if ($ShowWinForms) {
         $Form.ShowDialog()
+        $Form.Dispose()
+        if ($HideConsole) {
+            [Console.Window]::ShowWindow($consolePtr,9) | Out-Null
+        }
     } else {
         return $Form
     }
@@ -94,7 +108,6 @@ function New-WinFormControl {
 
     $Script:ControlHandler[$Name] = New-Object System.Windows.Forms.$Type
     # Construction des Properties
-    # $ValidProperties = $Script:ControlHandler[$Name].PSobject.Properties.Name
     foreach ($Key in $Definition.Keys) {
         try {
             if (@('Events','Childrens','ControlType') -notcontains $Key) {
@@ -104,11 +117,13 @@ function New-WinFormControl {
             }
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+            $ValidProperties = $Script:ControlHandler[$Name].PSobject.Properties.Name -join(', ~') -split('~')
+            Write-Host "[$Name] accepte only :" -ForegroundColor Red -NoNewline
+            Write-Color $ValidProperties -ForeGroundColor Red,Magenta
         }
     }
 
     # Construction des Events
-    # $ValidEvents = $Script:ControlHandler[$Name].PSobject.Methods.Name
     foreach ($Evt in $Definition.Events.Keys) {
         try {
             Write-Verbose "$Tabs+-- On_$($Evt)()"
@@ -116,6 +131,11 @@ function New-WinFormControl {
             # Write-LogStep 'Event',"On_$($Evt)" ok
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+            $ValidEvents = ($Script:ControlHandler[$Name].PSobject.Methods.Name | Where-Object {
+                $_ -match 'add_.+'
+            }) -replace('add_') -join(', ~') -split('~')
+            Write-Host "[$Name] accepte only : " -ForegroundColor Blue -NoNewline
+            Write-Color $ValidEvents -ForeGroundColor Yellow,Magenta
         }
     }
 

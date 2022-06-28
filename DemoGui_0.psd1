@@ -33,7 +33,7 @@
             Text     = 'GroupBox'
             Dock     = "Fill"
             Events   = @{
-                Click = [Scriptblock]{
+                Clicked = [Scriptblock]{
                     Invoke-EventTracer $this 'Click'
                 }
             }
