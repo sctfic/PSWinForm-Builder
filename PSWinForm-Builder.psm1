@@ -189,8 +189,6 @@ function New-WinFormControl {
 }
 
 
-
-
 Add-Type -AssemblyName System.Windows.Forms 
 [System.Windows.Forms.Application]::EnableVisualStyles()
 Add-Type -AssemblyName System.Drawing 
@@ -225,7 +223,7 @@ function Invoke-EventTracer {
     # $ObjThis | Write-Object
     Write-Host $ObjThis.name,$EventType -ForegroundColor Magenta
 }
-function Update-StdListView {
+function Update-ListView {
     <#
         .SYNOPSIS
             Hydrate la section Sizing
@@ -233,8 +231,8 @@ function Update-StdListView {
             [Descriptif en quelques lignes]
         .PARAMETER Items
             [PSCustomObject]@{
-                    Name    = 'xyz'
-                    Values  = 'xyz','xyz'
+                    FirstColValue    = 'xyz'
+                    NextValues  = 'xyz','xyz'
                     Group   = 'xyz'
                     Caption = 'Caption'
                     Status  = if((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%'){'Warn'} # defini la couleur si commance par : Warn, Info, Title
@@ -242,8 +240,8 @@ function Update-StdListView {
                 }
         .EXAMPLE
             [PSCustomObject]@{
-                    Name    = 'xyz'
-                    Values  = 'xyz','xyz'
+                    FirstColValue    = 'xyz'
+                    NextValues  = 'xyz','xyz'
                     Group   = 'xyz'
                     Caption = 'Caption'
                     Status  = if((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%'){'Warn'} # defini la couleur si commance par : Warn, Info, Title
@@ -261,12 +259,12 @@ function Update-StdListView {
     }
     process {
         foreach ($item in $items) {
-            if ($Item.name) {
-                # PopUp-Box $Item.name "> $($item | ConvertTo-Json)"
+            if ($Item.FirstColValue) {
+                # PopUp-Box $Item.FirstColValue "> $($item | ConvertTo-Json)"
                 try {
-                    $NewLine = $ListView.items.Add("$($Item.name)")
-                    if ($Item.Values) {
-                        $NewLine.SubItems.AddRange([string[]]$Item.Values) | out-null
+                    $NewLine = $ListView.items.Add("$($Item.FirstColValue)")
+                    if ($Item.NextValues) {
+                        $NewLine.SubItems.AddRange([string[]]$Item.NextValues) | out-null
                     }
                     # $NewLine.SubItems.AddRange("$($Item.Value)") | out-null
                     # $NewLine.SubItems.Add("$($Item.Detail)") | out-null
@@ -297,6 +295,109 @@ function Update-StdListView {
     }
     end {
         $ListView.EndUpdate() # ResumeLayout()
-        # Write-logstep $ListView.name,"$l Line Added" ok
+        # Write-logstep $ListView.FirstColValue,"$l Line Added" ok
+    }
+}
+function Set-ListViewSorted {
+    <#
+	.SYNOPSIS
+		Sort the ListView's item using the specified column.
+	.DESCRIPTION
+		Sort the ListView's item using the specified column.
+		This function uses Add-Type to define a class that sort the items.
+		The ListView's Tag property is used to keep track of the sorting.
+	.PARAMETER ListView
+		The ListView control to sort.
+	.PARAMETER ColumnIndex
+		The index of the column to use for sorting.
+	.PARAMETER SortOrder
+		The direction to sort the items. If not specified or set to None, it will toggle.
+
+	.EXAMPLE
+		Sort-ListViewColumn -ListView $listview1 -ColumnIndex 0
+
+	.NOTES
+		SAPIEN Technologies, Inc.
+		http://www.sapien.com/
+
+#>
+    param (
+        [ValidateNotNull()]
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Forms.ListView]$ListView,
+        [Parameter(Mandatory = $true)]
+        [int]$ColumnIndex,
+        [System.Windows.Forms.SortOrder]$SortOrder = 'None'
+    )
+
+    if (($ListView.Items.Count -eq 0) -or ($ColumnIndex -lt 0) -or ($ColumnIndex -ge $ListView.Columns.Count)) {
+        return;
+    }
+
+    #region Define ListViewItemComparer
+    try {
+        $local:type = [ListViewItemComparer]
+    } catch {
+        Add-Type -ReferencedAssemblies ('System.Windows.Forms') -TypeDefinition  @"
+	using System;
+	using System.Windows.Forms;
+	using System.Collections;
+	public class ListViewItemComparer : IComparer
+	{
+	    public int column;
+	    public SortOrder sortOrder;
+	    public ListViewItemComparer()
+	    {
+	        column = 0;
+			sortOrder = SortOrder.Ascending;
+	    }
+	    public ListViewItemComparer(int column, SortOrder sort)
+	    {
+	        this.column = column;
+			sortOrder = sort;
+	    }
+	    public int Compare(object x, object y)
+	    {
+			if(column >= ((ListViewItem)x).SubItems.Count)
+				return  sortOrder == SortOrder.Ascending ? -1 : 1;
+
+			if(column >= ((ListViewItem)y).SubItems.Count)
+				return sortOrder == SortOrder.Ascending ? 1 : -1;
+
+			if(sortOrder == SortOrder.Ascending)
+	        	return String.Compare(((ListViewItem)x).SubItems[column].Text, ((ListViewItem)y).SubItems[column].Text);
+			else
+				return String.Compare(((ListViewItem)y).SubItems[column].Text, ((ListViewItem)x).SubItems[column].Text);
+	    }
+	}
+"@ | Out-Null
+    }
+    #endregion
+
+    if ($ListView.Tag -is [ListViewItemComparer]) {
+        #Toggle the Sort Order
+        if ($SortOrder -eq [System.Windows.Forms.SortOrder]::None) {
+            if ($ListView.Tag.column -eq $ColumnIndex -and $ListView.Tag.sortOrder -eq 'Ascending') {
+                $ListView.Tag.sortOrder = 'Descending'
+            }
+            else {
+                $ListView.Tag.sortOrder = 'Ascending'
+            }
+        }
+        else {
+            $ListView.Tag.sortOrder = $SortOrder
+        }
+
+        $ListView.Tag.column = $ColumnIndex
+        $ListView.Sort()#Sort the items
+    }
+    else {
+        if ($Sort -eq [System.Windows.Forms.SortOrder]::None) {
+            $Sort = [System.Windows.Forms.SortOrder]::Ascending
+        }
+
+        #Set to Tag because for some reason in PowerShell ListViewItemSorter prop returns null
+        $ListView.Tag = New-Object ListViewItemComparer ($ColumnIndex, $SortOrder)
+        $ListView.ListViewItemSorter = $ListView.Tag #Automatically sorts
     }
 }

@@ -45,5 +45,5 @@ Copy content of `"Snippet Powershell.json"` to `"...\Code\User\snippets\powershe
         )
     }
 ```
-### Moude Verbose
+### Mode -Verbose
 ![alt tag](https://github.com/sctfic/PSWinForm-Builder/blob/main/Verbose.png "Verbose.png")
