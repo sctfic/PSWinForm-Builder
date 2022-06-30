@@ -6,9 +6,10 @@ Is a PowerShell module to load a Windows.Forms from a PSD1 definition file, all 
 ## Usage
 ```powershell
     ipmo PSWinForm-Builder
-    New-WinForm .\DemoGui.psd1 -Show
-
+    New-WinForm .\DemoGui.psd1 -ShowWinForms -Verbose
 ```
+## Snippet VSCode
+Copy content of `"Snippet Powershell.json"` to `"...\Code\User\snippets\powershell.json"` (VSCode --> File --> Preferences --> User Snippets --> Powershell)
 
 ## PSD1 file must habe following structure
 ### Descripter *.psd1
@@ -44,5 +45,5 @@ Is a PowerShell module to load a Windows.Forms from a PSD1 definition file, all 
         )
     }
 ```
-
+### Moude Verbose
 ![alt tag](https://github.com/sctfic/PSWinForm-Builder/blob/main/Verbose.png "Verbose.png")
