@@ -10,7 +10,10 @@
                 Add-Type -Name Window -Namespace Console -MemberDefinition '[DllImport("Kernel32.dll")]public static extern IntPtr GetConsoleWindow();[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
             }
             $consolePtr = [Console.Window]::GetConsoleWindow()
-            [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
+            if (!$PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
+                [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
+            }
+            Get-DnsByName -prefix 'RT-' | Update-ListView -listView $Script:ControlHandler['Routers_LV']
         }
         KeyDown = [Scriptblock]{ # Event
             Invoke-EventTracer $this 'KeyDown'
@@ -30,18 +33,33 @@
             Events      = @{
                 SelectedIndexChanged = [Scriptblock]{ # Event
                     Invoke-EventTracer $this 'SelectedIndexChanged'
-                    $this.SelectedTab.Name
+                    Write-Verbose $this.SelectedTab.Name
+                    $Script:ControlHandler["$($this.SelectedTab.Name)_LV"].Items.Clear()
+                    $Script:ControlHandler["Loading"].Visible = $true
+                    $(switch ($this.SelectedTab.Name) {
+                        'Routers' {
+                            Get-DnsByName -prefix 'RT-'
+                        }
+                        'Switchs' {
+                            Get-DnsByName -prefix 'SW-'
+                        }
+                        'Servers' {
+                            Get-DnsBySamAccountName -prefix 'SRV-'
+                        }
+                        default {}
+                    }) | Update-ListView -listView $Script:ControlHandler["$($this.SelectedTab.Name)_LV"]
+                    $Script:ControlHandler["Loading"].Visible = $false
                 }
             }
             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
                 @{  ControlType = 'TabPage'
-                    # Name        = 'TabPage'
-                    Text        = 'Tab1'
+                    Name        = 'Routers'
+                    Text        = 'Routers'
                     Dock        = 'Fill'
                     Events      = @{}
                     Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
                         @{  ControlType = 'ListView'
-                            Name             = 'ListView_1'
+                            Name             = 'Routers_LV'
                             Dock             = 'Fill'
                             Activation       = 'OneClick'
                             FullRowSelect    = 'True'
@@ -50,20 +68,6 @@
                             ShowItemToolTips = 'True'
                             View             = 'Details'
                             Events      = @{
-                                Enter    = [Scriptblock]{ # Event
-                                    Invoke-EventTracer $this 'Enter'
-                                    1..9 | %{
-                                        [PSCustomObject]@{
-                                            FirstColValue = (Get-Random 100)
-                                            NextValues = (Get-Random 'Value1', 'Value2', 'Value0','Value3'),(Get-Random 'Value1', 'Value2', 'Value0','Value3')
-                                            Group   = (Get-Random 'Grp1', 'Grp2', 'Grp0','')
-                                            Caption = 'Caption '
-                                            Status  = (Get-Random 'Warn', 'Info', 'Title','')
-                                            Shadow  = (Get-Random $true, $false) # gris clair
-                                        }
-                                    } | Update-ListView -listView $this
-                                    
-                                }
                                 ColumnClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'ColumnClick'
                                     Set-ListViewSorted  -listView $this -column $_.Column
@@ -96,13 +100,13 @@
                     )
                 },
                 @{  ControlType = 'TabPage'
-                    # Name        = 'TabPage'
-                    Text        = 'Tab2'
+                    Name        = 'Switchs'
+                    Text        = 'Switchs'
                     Dock        = 'Fill'
                     Events      = @{}
                     Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
                         @{  ControlType = 'ListView'
-                            Name             = 'ListView_2'
+                            Name             = 'Switchs_LV'
                             Dock             = 'Fill'
                             Activation       = 'OneClick'
                             FullRowSelect    = 'True'
@@ -111,20 +115,6 @@
                             ShowItemToolTips = 'True'
                             View             = 'Details'
                             Events      = @{
-                                Enter    = [Scriptblock]{ # Event
-                                    Invoke-EventTracer $this 'Enter'
-                                    1..9 | %{
-                                        [PSCustomObject]@{
-                                            FirstColValue = (Get-Random 100)
-                                            NextValues = (Get-Random 'Value1', 'Value2', 'Value0','Value3'),(Get-Random 'Value1', 'Value2', 'Value0','Value3')
-                                            Group   = (Get-Random 'Grp1', 'Grp2', 'Grp0','')
-                                            Caption = 'Caption '
-                                            Status  = (Get-Random 'Warn', 'Info', 'Title','')
-                                            Shadow  = (Get-Random $true, $false) # gris clair
-                                        }
-                                    } | Update-ListView -listView $this
-                                    
-                                }
                                 ColumnClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'ColumnClick'
                                     Set-ListViewSorted  -listView $this -column $_.Column
@@ -157,14 +147,14 @@
                     )
                 },
                 @{  ControlType = 'TabPage'
-                    # Name        = 'TabPage'
-                    Text        = 'Tab3'
+                    Name        = 'Servers'
+                    Text        = 'Servers'
                     Dock        = 'Fill'
                     Events      = @{}
                     Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
                         @{  ControlType = 'ListView'
-                            Name             = 'ListView_3'
-                            Dock             = 'top'
+                            Name             = 'Servers_LV'
+                            Dock             = 'Fill'
                             Activation       = 'OneClick'
                             FullRowSelect    = 'True'
                             HoverSelection   = 'True'
@@ -172,20 +162,6 @@
                             ShowItemToolTips = 'True'
                             View             = 'Details'
                             Events      = @{
-                                Enter    = [Scriptblock]{ # Event
-                                    Invoke-EventTracer $this 'Enter'
-                                    1..9 | %{
-                                        [PSCustomObject]@{
-                                            FirstColValue = (Get-Random 100)
-                                            NextValues = (Get-Random 'Value1', 'Value2', 'Value0','Value3'),(Get-Random 'Value1', 'Value2', 'Value0','Value3')
-                                            Group   = (Get-Random 'Grp1', 'Grp2', 'Grp0','')
-                                            Caption = 'Caption '
-                                            Status  = (Get-Random 'Warn', 'Info', 'Title','')
-                                            Shadow  = (Get-Random $true, $false) # gris clair
-                                        }
-                                    } | Update-ListView -listView $this
-                                    
-                                }
                                 ColumnClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'ColumnClick'
                                     Set-ListViewSorted  -listView $this -column $_.Column
@@ -219,6 +195,12 @@
                 }
             )
         },
+        @{  ControlType = 'ProgressBar'
+            Name        = 'Loading'
+            Style       = 'Marquee'
+            Dock        = 'Top'
+            Height      = 5
+        },
         @{  ControlType = 'Splitter'
             Dock        = 'Bottom' # 
             Events      = @{
@@ -233,8 +215,18 @@
             Events      = @{}
             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
                 @{  ControlType = 'Checkbox'
-                    Name        = 'Checkbox_label'
-                    Text        = 'label'
+                    Name        = 'Checkbox_ICMP'
+                    Text        = 'ICMP'
+                    Dock        = 'Top'
+                    Events      = @{
+                        CheckedChanged    = [Scriptblock]{ # Event
+                            Invoke-EventTracer $this 'CheckedChanged'
+                        }
+                    }
+                },
+                @{  ControlType = 'Checkbox'
+                    Name        = 'Checkbox_RDP'
+                    Text        = 'RDP'
                     Dock        = 'Top'
                     Events      = @{
                         CheckedChanged    = [Scriptblock]{ # Event

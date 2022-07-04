@@ -57,45 +57,57 @@ function New-WinForm () {
         [string]$DefinitionFile,
         [switch]$ShowWinForms,
         [switch]$HideConsole,
-        $Modules = @((get-item $DefinitionFile).FullName -replace('.psd1','.psm1'))
+        [Alias('Modules')][string[]]$PreloadModules
     )
-    if ($HideConsole -and $ShowWinForms) {
-        if (-not ('Console.Window' -as [type])) {
-            Add-Type -Name Window -Namespace Console -MemberDefinition '[DllImport("Kernel32.dll")]public static extern IntPtr GetConsoleWindow();[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
+    begin{
+        Write-LogStep "Load Descriptor File",$DefinitionFile Wait
+        if ($HideConsole -and $ShowWinForms) {
+            if (-not ('Console.Window' -as [type])) {
+                Add-Type -Name Window -Namespace Console -MemberDefinition '[DllImport("Kernel32.dll")]public static extern IntPtr GetConsoleWindow();[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
+            }
+            $consolePtr = [Console.Window]::GetConsoleWindow()
+            [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
         }
-        $consolePtr = [Console.Window]::GetConsoleWindow()
-        [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
     }
+    process{
 
-    # Get forms definition from file
-    $FormDef = Import-PowerShellDataFile $DefinitionFile -SkipLimitCheck
-    $Script:ControlHandler = @{}
-    
-    if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
-        throw "[$($FormDef.ControlType)] n'est pas valide au 1er niveau. Le 1er controler doit etre de type [From] ou omis"
-    } else {
-        Write-Verbose "[Form]"
-        # Write-LogStep '[Form]',"" ok
-        $Form = New-WinFormControl -Type 'Form' -Definition $FormDef
-        Write-Verbose "$Last$Space END!"
-    }
-    
-    foreach ($Module in $Modules){
-        try {
-            Import-module $Module -SkipEditionCheck -DisableNameChecking -ea Stop
-        } catch {
-            Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+        # Get forms definition from file
+        $FormDef = Import-PowerShellDataFile $DefinitionFile -SkipLimitCheck
+        $Script:ControlHandler = @{}
+        
+        if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
+            throw "[$($FormDef.ControlType)] n'est pas valide au 1er niveau. Le 1er controler doit etre de type [From] ou omis"
+        } else {
+            Write-Verbose "[Form]"
+            # Write-LogStep '[Form]',"" ok
+            $Form = New-WinFormControl -Type 'Form' -Definition $FormDef
+            Write-Verbose "$Last$Space END!"
         }
+        
     }
+    
+    end{
+        $PreloadModules += (get-item $DefinitionFile).FullName -replace('.psd1','.psm1')
+        foreach ($Module in $PreloadModules){
+            Write-Verbose $Module
+            try {
+                Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Verbose:$false -Force
+            } catch {
+                Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+            }
+        }
+        
+        Write-LogStep "Form is available","Call with '`$Script:ControlHandler['$($Form.Name)'].ShowDialog()'" -mode ok
 
-    if ($ShowWinForms) {
-        $Form.ShowDialog()
-        $Form.Dispose()
-        if ($HideConsole) {
-            [Console.Window]::ShowWindow($consolePtr,9) | Out-Null
+        if ($ShowWinForms) {
+            $Form.ShowDialog()
+            $Form.Dispose()
+            if ($HideConsole) {
+                [Console.Window]::ShowWindow($consolePtr,9) | Out-Null
+            }
+        } else {
+            return $Form
         }
-    } else {
-        return $Form
     }
 }
 
@@ -242,7 +254,7 @@ function Invoke-EventTracer {
 function Update-ListView {
     <#
         .SYNOPSIS
-            Hydrate la section Sizing
+            Hydrate Une listView
         .DESCRIPTION
             [Descriptif en quelques lignes]
         .PARAMETER Items
@@ -275,8 +287,8 @@ function Update-ListView {
     }
     process {
         foreach ($item in $items) {
+            # $Item | Write-Object -PassThru -foreGroundColor Magenta
             if ($Item.FirstColValue) {
-                # PopUp-Box $Item.FirstColValue "> $($item | ConvertTo-Json)"
                 try {
                     $NewLine = $ListView.items.Add("$($Item.FirstColValue)")
                     if ($Item.NextValues) {
@@ -299,8 +311,7 @@ function Update-ListView {
                     elseif ($Item.Status -like 'Info*' -or $Item.Caption -like "Info`n*") { $NewLine.BackColor = 'MediumSpringGreen' } # NavajoWhite
                     elseif ($Item.Status -eq 'Title') { $NewLine.ForeColor = 'MidnightBlue' }
                     if ($Item.Shadow) { $NewLine.foreColor = [System.Drawing.Color]::Gray }
-                }
-                catch {
+                } catch {
                     $item | Write-Object -back black -fore red
                     Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" '', $_ Error
                 }
