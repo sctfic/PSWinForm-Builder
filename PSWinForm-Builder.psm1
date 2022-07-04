@@ -56,7 +56,8 @@ function New-WinForm () {
             HelpMessage = 'File contenaining form definition')]
         [string]$DefinitionFile,
         [switch]$ShowWinForms,
-        [switch]$HideConsole
+        [switch]$HideConsole,
+        $Modules = @((get-item $DefinitionFile).FullName -replace('.psd1','.psm1'))
     )
     if ($HideConsole -and $ShowWinForms) {
         if (-not ('Console.Window' -as [type])) {
@@ -78,6 +79,14 @@ function New-WinForm () {
         $Form = New-WinFormControl -Type 'Form' -Definition $FormDef
         Write-Verbose "$Last$Space END!"
     }
+    
+    foreach ($Module in $Modules){
+        try {
+            Import-module $Module -SkipEditionCheck -DisableNameChecking -ea Stop
+        } catch {
+            Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+        }
+    }
 
     if ($ShowWinForms) {
         $Form.ShowDialog()
@@ -94,7 +103,8 @@ function New-WinFormControl {
     param (
         [Alias('Type')]$CurrentControlType,
         [Alias('Definition')]$CurrentControlDef,
-        [Alias('Indentation')]$tabs=''
+        [Alias('Indentation')]$tabs='',
+        [switch]$isFirst
     )
 
 
@@ -118,7 +128,9 @@ function New-WinFormControl {
             if (@('Name','Events','Childrens','ControlType') -notcontains $Key) {
                 Write-Verbose "$Tabs$Plus$Space $($Key.padright(18)) = '$($CurrentControlDef.$Key)'"
                 $Script:ControlHandler[$Name].$Key = $CurrentControlDef.$Key
-                # Write-LogStep $Key,$($CurrentControlDef.$Key) ok
+                if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent -and $isFirst -and $Key -eq 'Dock' -and $CurrentControlDef.$Key -ne 'Fill' -and @('Checkbox','InputBox') -notcontains $Children.ControlType) {
+                    Write-Color ("         $tabs$Pass  $Last$Space ","Prefer @{Dock = 'Fill'} for the fisrt children and Top,Bottom,Left,Right for the following") -ForegroundColor yellow, Magenta
+                }
             }
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
@@ -146,11 +158,12 @@ function New-WinFormControl {
         }
     }
 
+    $FirstChild = $true
     # Construction des Childrens Controls
     foreach ($Children in $CurrentControlDef.Childrens ) {
         try {
             Write-Verbose "$tabs$Plus$Space [$($CurrentControlDef.ControlType)].$($Children.ControlType)"
-            $WinFormChildren = (New-WinFormControl -Type $Children.ControlType -Definition $Children -Tabs "$Pass  $Tabs")
+            $WinFormChildren = (New-WinFormControl -Type $Children.ControlType -Definition $Children -Tabs "$Pass  $Tabs" -isFirst:$FirstChild)
             if ($Children.ControlType -match '^ToolStrip') {
                 if ($CurrentControlDef.ControlType -match '^ToolStrip') {
                     Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].DropDownItems.Add([$($Children.ControlType)].$($WinFormChildren.Name))"
@@ -182,6 +195,7 @@ function New-WinFormControl {
             write-host "[$($CurrentControlDef.ControlType)]$Name.[$($Children.ControlType)]$($Children.Name)" -foreGroundColor red
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
         }
+        $FirstChild = $false
     }
 
     # $Script:ControlHandler[$Name] | Write-Object -fore gray
@@ -220,8 +234,10 @@ function Invoke-EventTracer {
         $ObjThis,
         $EventType
     )
-    # $ObjThis | Write-Object
-    Write-Host $ObjThis.name,$EventType -ForegroundColor Magenta
+    if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
+        Write-Host $ObjThis.name,$EventType -ForegroundColor Magenta
+        # $ObjThis | Write-Object
+    }
 }
 function Update-ListView {
     <#
