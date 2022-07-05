@@ -50,7 +50,7 @@ Copy content of `"Snippet Powershell.json"` to `"...\Code\User\snippets\powershe
 ```
 
 ### Rendu GUI (generate and loading 1.2s)
-![alt tag](https://github.com/sctfic/PSWinForm-Builder/blob/main/Example.png "Example.png")
+![alt tag](https://github.com/sctfic/PSWinForm-Builder/blob/main/Media/Example.png "Example.png")
 
 ### Mode -Verbose
-![alt tag](https://github.com/sctfic/PSWinForm-Builder/blob/main/Verbose.png "Verbose.png")
+![alt tag](https://github.com/sctfic/PSWinForm-Builder/blob/main/Media/Verbose.png "Verbose.png")
