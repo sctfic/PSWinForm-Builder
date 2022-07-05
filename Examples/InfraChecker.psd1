@@ -14,24 +14,49 @@
                 [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
             }
         }
-        Activated    = [Scriptblock]{ # Event
-            Invoke-EventTracer $this 'Activated'
-            $Tabs = $Script:ControlHandler['TabsRessources']
-            $Script:ControlHandler["$($Tabs.SelectedTab.Name)_LV"].Items.Clear()
-            $Script:ControlHandler["Loading"].Visible = $true
-            $(switch ($Tabs.SelectedTab.Name) {
-                'Routers' {
-                    Get-DnsByName -prefix 'RT-'
+        Activated    = @{
+            Type='Thread'
+            ScriptBlock={
+                param($Caller, $e)
+                function Write-Host {
+                    # Wrapper for Write-Host in threads
+                    param(
+                        $object,
+                        [ConsoleColor]$foregroundColor,
+                        [ConsoleColor]$backgroundColor,
+                        [switch]$nonewline
+                    )
+                    if ($foregroundColor) {
+                        [Console]::ForegroundColor = $foregroundColor
+                    }
+                    elseif ($backgroundColor) {
+                        [Console]::BackgroundColor = $backgroundColor
+                    }
+                    [Console]::Write($object -join (', ')) | Out-Null
+                    if (!$nonewline) { [Console]::Write( "`n" ) | Out-Null }
+                    [Console]::ResetColor() | Out-Null
                 }
-                'Switchs' {
-                    Get-DnsByName -prefix 'SW-'
-                }
-                'Servers' {
-                    Get-DnsBySamAccountName -prefix 'SRV-'
-                }
-                default {}
-            }) | Update-ListView -listView $Script:ControlHandler["$($Tabs.SelectedTab.Name)_LV"]
-            $Script:ControlHandler["Loading"].Visible = $false
+                Write-Host 'ThreadEventHandler' -backgroundColor Magenta 
+                Write-Host 'ThreadEventHandler',$caller.name -backgroundColor Magenta 
+
+        #         Invoke-EventTracer $this 'Activated'
+        #         $Tabs = $Script:ControlHandler['TabsRessources']
+        #         $Script:ControlHandler["$($Tabs.SelectedTab.Name)_LV"].Items.Clear()
+        #         $Script:ControlHandler["Loading"].Visible = $true
+        #         $(switch ($Tabs.SelectedTab.Name) {
+        #             'Routers' {
+        #                 Get-DnsByName -prefix 'RT-'
+        #             }
+        #             'Switchs' {
+        #                 Get-DnsByName -prefix 'SW-'
+        #             }
+        #             'Servers' {
+        #                 Get-DnsBySamAccountName -prefix 'SRV-'
+        #             }
+        #             default {}
+        #         }) | Update-ListView -listView $Script:ControlHandler["$($Tabs.SelectedTab.Name)_LV"]
+        #         $Script:ControlHandler["Loading"].Visible = $false
+            }
         }
         KeyDown = [Scriptblock]{ # Event
             Invoke-EventTracer $this 'KeyDown'

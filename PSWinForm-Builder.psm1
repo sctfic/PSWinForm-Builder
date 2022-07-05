@@ -48,6 +48,17 @@ $Plus=[char]9500
 $Space=[char]9472
 $Last=[char]9492
 
+# class ThreadScriptBlock {
+#     # Optionally, add attributes to prevent invalid values
+#     [string]$Name
+#     [ScriptBlock]$ScriptBlock
+#     ThreadScriptBlock( $ScriptBlock) { # [ThreadScriptBlock]::new('xxx',{return 123})
+#     #    $this.Name = $Name
+#        $this.ScriptBlock = $ScriptBlock
+#     }
+# }
+
+
 function New-WinForm () {
     param(
         [Parameter(Mandatory = $True, 
@@ -74,6 +85,7 @@ function New-WinForm () {
         # Get forms definition from file
         $FormDef = Import-PowerShellDataFile $DefinitionFile -SkipLimitCheck
         $Script:ControlHandler = @{}
+        $Script:ThreadEventHandler = @{}
         
         if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
             throw "[$($FormDef.ControlType)] n'est pas valide au 1er niveau. Le 1er controler doit etre de type [From] ou omis"
@@ -156,7 +168,22 @@ function New-WinFormControl {
         foreach ($Evt in $CurrentControlDef.Events.Keys) {
             try {
                 Write-Verbose "$Tabs$Plus$Space Event.On_$($Evt)()"
-                $Script:ControlHandler[$Name]."Add_$($Evt)"( $CurrentControlDef.Events.$Evt )
+                if ($CurrentControlDef.Events.$Evt -is [ScriptBlock] ) {
+                    $Script:ControlHandler[$Name]."Add_$($Evt)"( $CurrentControlDef.Events.$Evt )
+                } elseif($CurrentControlDef.Events.$Evt -is [Hashtable]) {
+                    if($CurrentControlDef.Events.$Evt.type -eq 'Thread') {
+                        # Write-Host 'ThreadScriptBlock' -backgroundColor Magenta 
+                        $Script:ThreadEventHandler["$Name-$Evt"] = @{
+                            Name = "$Name-$Evt"
+                            # This = $Script:ControlHandler[$Name]
+                            ScriptBlock = $CurrentControlDef.Events.$Evt.ScriptBlock
+                        }
+                        $Script:ControlHandler[$Name]."Add_$($Evt)"({
+                            param($caller,$e)
+                            Start-ThreadJob -Name "$($this.Name)-$ThisEventName" -ScriptBlock $Script:ThreadEventHandler["$($this.Name)-$ThisEventName"].ScriptBlock
+                        })
+                    } else {}
+                } else {}
                 # Write-LogStep 'Event',"On_$($Evt)" ok
             } catch {
                 Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
