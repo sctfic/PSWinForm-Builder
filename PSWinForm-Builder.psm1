@@ -89,7 +89,6 @@ function New-WinForm () {
     end{
         $PreloadModules += (get-item $DefinitionFile).FullName -replace('.psd1','.psm1')
         foreach ($Module in $PreloadModules){
-            Write-Verbose $Module
             try {
                 Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Verbose:$false -Force
             } catch {

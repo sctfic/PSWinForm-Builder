@@ -11,13 +11,13 @@ function Get-DNSBySamAccountName {
     }
     process {
         Get-ADComputer -Filter 'DNSHostName -like "SRV*"' -Properties DNSHostName,IPv4Address -Server $Zone | %{
-            Write-Verbose $_.DNSHostName
+            $ping = Ping $_.IPv4Address -ports 0 -loop 1
             [PSCustomObject]@{
                 FirstColValue = $_.DNSHostName
-                NextValues    = $_.IPv4Address
+                NextValues    = $_.IPv4Address,"$($ping.ICMP) ms"
                 Group         = $null
                 Caption       = $_.SID.Value
-                Status        = if ((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%') { 'Warn' } # defini la couleur si commance par : Warn, Info, Title
+                Status        = if ($ping.status -ne '100%') { 'Warn' } # defini la couleur si commance par : Warn, Info, Title
                 Shadow        = $false # gris clair
             }
         }
@@ -42,13 +42,13 @@ function Get-DnsByName {
         $dns = Get-DnsServerResourceRecord -ComputerName $Zone -ZoneName $Zone -RRType A | ?{$_.hostname -match "$prefix.*"}
         
         $dns | %{
-            Write-Verbose $_.HostName
+            $ping = Ping $_.RecordData.IPv4Address.IPAddressToString -ports 0 -loop 1
             [PSCustomObject]@{
                 FirstColValue = $_.HostName + "." + $Zone
-                NextValues    = $_.RecordData.IPv4Address.IPAddressToString
+                NextValues    = $_.RecordData.IPv4Address.IPAddressToString,"$($ping.ICMP) ms"
                 Group         = (($_.HostName -split ('\.'))[1..2] -join ('.'))
                 Caption       = "infos Bulles"
-                Status        = if ((ping $_.RecordData.IPv4Address.IPAddressToString -ports 0 -loop 1).status -ne '100%') { 'Warn' } # defini la couleur si commance par : Warn, Info, Title
+                Status        = if ($ping.status -ne '100%') { 'Warn' } # defini la couleur si commance par : Warn, Info, Title
                 Shadow        = $false # gris clair
             }
         }
@@ -80,3 +80,13 @@ function Get-DnsByName {
         }
     }
  }
+function Get-Port2Ping {
+    Write-Host -fore Cyan 'Get-Port2Ping'
+    $Ports = @('Checkbox_SSH', 'Checkbox_RDP', 'Checkbox_JetDirect', 'Checkbox_ICMP' | Get-CheckBoxValue) + @((Get-TextBoxValue 'OtherPorts') -split(',;') | %{
+        Write-Host -fore Cyan $_
+        ($_ -as [int])
+    } | ?{$_}) -join(',')
+    Write-Host -fore Cyan $Ports
+
+    # return $Ports
+}
