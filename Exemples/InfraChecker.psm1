@@ -1,7 +1,7 @@
 function Get-DNSBySamAccountName {
     [CmdletBinding()]
     param (
-        $prefix = 'SRV-'
+        $prefix = '^(SRV|P|V)-'
     )
     begin {
         # $Script:ControlHandler["Loading"].Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
@@ -10,7 +10,7 @@ function Get-DNSBySamAccountName {
         $Zone = ([System.DirectoryServices.ActiveDirectory.Domain]::getCurrentDomain()).Forest.name
     }
     process {
-        Get-ADComputer -Filter 'DNSHostName -like "SRV*"' -Properties DNSHostName,IPv4Address -Server $Zone | %{
+        Get-ADComputer -Filter "DNSHostName -match `"$prefix`"" -Properties DNSHostName,IPv4Address -Server $Zone | %{
             $ping = Ping $_.IPv4Address -ports 0 -loop 1
             [PSCustomObject]@{
                 FirstColValue = $_.DNSHostName
@@ -29,7 +29,7 @@ function Get-DNSBySamAccountName {
 }
 function Get-DnsByName {
     param (
-        [string]$prefix
+        [string]$prefix = '^(SRV|P|V)-'
     )
     begin{
         # $Script:ControlHandler["Loading"].Style = [System.Windows.Forms.ProgressBarStyle]::Marquee

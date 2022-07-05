@@ -18,7 +18,12 @@
 			"                Add-Type -Name Window -Namespace Console -MemberDefinition '[DllImport(\"Kernel32.dll\")]public static extern IntPtr GetConsoleWindow();[DllImport(\"user32.dll\")]public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'",
 			"            }",
 			"            \\$consolePtr = [Console.Window]::GetConsoleWindow()",
-			"            [Console.Window]::ShowWindow(\\$consolePtr,0) | Out-Null",
+			"            if (!$PSCmdlet.MyInvocation.BoundParameters['Verbose'].IsPresent) {",
+            "                [Console.Window]::ShowWindow($consolePtr,0) | Out-Null",
+            "            }",
+			"        }",
+			"        Activated = [Scriptblock]{ # Event",
+			"            Invoke-EventTracer \\$this 'Activated'",
 			"        }",
 			"        KeyDown = [Scriptblock]{ # Event",
 			"            Invoke-EventTracer \\$this 'KeyDown'",
@@ -37,19 +42,6 @@
 		],
 		"description": "WinForm structure for descriptor file WinForms.psd1"
 	},
-	"GroupBox": {
-		"prefix": "GroupBox",
-		"body": [
-			"@{  ControlType = 'GroupBox'",
-			"    Text        = '${1:label}'",
-			"    Dock        = 'Fill'",
-			"    Events      = @{}",
-			"    Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]",
-			"    )",
-			"}"
-		],
-		"description": "GroupBox structure for descriptor file WinForms.psd1"
-	},
 	"TabControl": {
 		"prefix": "TabControl",
 		"body": [
@@ -58,12 +50,18 @@
 			"    Events      = @{",
 			"        SelectedIndexChanged = [Scriptblock]{ # Event",
 			"            Invoke-EventTracer \\$this 'SelectedIndexChanged'",
-			"            \\$this.SelectedTab.Name",
+			"           switch ($this.SelectedTab.Name) {",
+			"               'Tab1' {",
+			"               }",
+			"               'Tab2' {",
+			"               }",
+			"               default {}",
+			"           }",
 			"        }",
 			"    }",
 			"    Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]",
 			"        @{  ControlType = 'TabPage'",
-			"            # Name        = 'TabPage'",
+			"            Name        = 'Tab1'",
 			"            Text        = '${2:Tab1}'",
 			"            Dock        = 'Fill'",
 			"            Events      = @{}",
@@ -71,7 +69,7 @@
 			"            )",
 			"        },",
 			"        @{  ControlType = 'TabPage'",
-			"            # Name        = 'TabPage'",
+			"            Name        = 'Tab2'",
 			"            Text        = '${3:Tab2}'",
 			"            Dock        = 'Fill'",
 			"            Events      = @{}",
@@ -127,9 +125,9 @@
 			"@{  ControlType = 'ListView'",
 			"    Name             = 'ListView_${1:label}'",
 			"    Dock             = 'Fill'",
-			"    Activation       = 'OneClick'",
+			"    # Activation       = 'OneClick'",
 			"    FullRowSelect    = 'True'",
-			"    HoverSelection   = 'True'",
+			"    # HoverSelection   = 'True'",
 			"    ShowGroups       = 'True'",
 			"    ShowItemToolTips = 'True'",
 			"    View             = 'Details'",
@@ -495,6 +493,7 @@
 			"    Name        = 'Checkbox_${1:label}'",
 			"    Text        = '${1:label}'",
 			"    Dock        = 'Top'",
+			"    Checked     = \\$True",
 			"    Events      = @{",
 			"        CheckedChanged    = [Scriptblock]{ # Event",
 			"            Invoke-EventTracer \\$this 'CheckedChanged'",
@@ -504,13 +503,99 @@
 		],
 		"description": "Checkbox structure for descriptor file WinForms.psd1"
 	},
+	"ListBox": {
+		"prefix": "ListBox",
+		"body": [
+			"@{  ControlType = 'ListBox'",
+			"    Name        = 'ListBox_${1:label}'",
+			"    Text        = '${1:label}'",
+			"    Dock        = 'Top'",
+			"    Events      = @{",
+			"        DoubleClick    = [Scriptblock]{ # Event",
+			"            Invoke-EventTracer \\$this 'DoubleClick'",
+			"        }",
+			"    }",
+			"}"
+		],
+		"description": "ListBox structure for descriptor file WinForms.psd1"
+	},
+	"RichTextBox": {
+		"prefix": "RichTextBox",
+		"body": [
+			"@{  ControlType = 'RichTextBox'",
+			"    Name        = 'RichTextBox_${1:label}'",
+			"    Text        = '${1:label}'",
+			"    Dock        = 'Top'",
+			"    Events      = @{",
+			"        DoubleClick    = [Scriptblock]{ # Event",
+			"            Invoke-EventTracer \\$this 'DoubleClick'",
+			"        }",
+			"    }",
+			"}"
+		],
+		"description": "RichTextBox structure for descriptor file WinForms.psd1"
+	},
+	"GroupBox": {
+		"prefix": "GroupBox",
+		"body": [
+			"@{  ControlType = 'GroupBox'",
+			"    Text        = '${1:label}'",
+			"    Dock        = 'Fill'",
+			"    Events      = @{}",
+			"    Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]",
+			"    )",
+			"}"
+		],
+		"description": "GroupBox structure for descriptor file WinForms.psd1"
+	},
+	"RadioButton": {
+		"prefix": "RadioButton",
+		"body": [
+			"@{  ControlType = 'RadioButton'",
+			"    Name        = 'RadioButton_${1:label}'",
+			"    Text        = '${1:label}'",
+			"    Dock        = 'Top'",
+			"    Events      = @{",
+			"        CheckedChanged    = [Scriptblock]{ # Event",
+			"            Invoke-EventTracer \\$this 'CheckedChanged'",
+			"        }",
+			"    }",
+			"}"
+		],
+		"description": "RadioButton structure for descriptor file WinForms.psd1"
+	},
+	"TextBox": {
+		"prefix": "TextBox",
+		"body": [
+			"@{  ControlType = 'Panel'",
+			"    Dock        = 'Top'",
+			"    Events      = @{}",
+			"    Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]",
+			"        @{  ControlType = 'Label'",
+			"            Text        = '${1:label}'",
+			"            Dock        = 'Fill'",
+			"        },",
+			"        @{  ControlType = 'TextBox'",
+			"            Name        = 'TextBox_${1:label}'",
+			"            Dock        = 'Right'",
+			"            Events      = @{",
+			"                TextChanged    = [Scriptblock]{ # Event",
+			"                    Invoke-EventTracer \\$this 'TextChanged'",
+			"                }",
+			"            }",
+			"        }",
+			"    )",
+			"}"
+		],
+		"description": "TextBox structure for descriptor file WinForms.psd1"
+	},
 	"Button": {
 		"prefix": "Button",
 		"body": [
 			"@{  ControlType = 'Button'",
 			"    Name        = 'Button_${1:label}'",
 			"    Text        = '${1:label}'",
-			"    Dock        = 'Fill'",
+			"    Dock        = 'Bottom'",
 			"    Events      = @{",
 			"        Click    = [Scriptblock]{ # Event",
 			"            Invoke-EventTracer \\$this 'Click'",

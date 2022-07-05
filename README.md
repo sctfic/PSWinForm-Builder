@@ -4,9 +4,12 @@ PowerShell Module to build a windows.forms object from a defintion file
 Is a PowerShell module to load a Windows.Forms from a PSD1 definition file, all Windows.Forms controls can be defined.
 
 ## Usage
+
+You can write a description file `MyProject.psd1` for GUI and Event and you can extand by a function file with same Name but extension is *.psm1 like `MyProject.psm1` (if this file exist is imported like powershell module)
+
 ```powershell
-    ipmo PSWinForm-Builder
-    New-WinForm .\DemoGui.psd1 -ShowWinForms -Verbose
+    Import-Module PSWinForm-Builder
+    New-WinForm .\DemoGui.psd1  -ShowWinForms -PreloadModules PsWrite,PsBright -Verbose
 ```
 ## Snippet VSCode
 Copy content of `"Snippet Powershell.json"` to `"...\Code\User\snippets\powershell.json"` (VSCode --> File --> Preferences --> User Snippets --> Powershell)
