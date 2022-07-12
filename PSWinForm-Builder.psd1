@@ -12,7 +12,7 @@
 RootModule = 'PSWinForm-Builder.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.0.01'
+ModuleVersion = '0.1.2.01'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -66,7 +66,7 @@ Description = "PSWinForm-Builder is a PowerShell module to load a Windows.Forms 
 # FormatsToProcess = @()
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
-NestedModules = @('PsWrite')
+NestedModules = @('PSWinForm-Builder_Tools.psm1','PSWrite.psd1')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = '*'
@@ -84,7 +84,7 @@ AliasesToExport = '*'
 # DscResourcesToExport = @()
 
 # List of all modules packaged with this module
-# ModuleList = @()
+ModuleList = @('PSWinForm-Builder.psd1','PSWinForm-Builder.psm1','PSWinForm-Builder_Tools.psm1')
 
 # List of all files packaged with this module
 # FileList = @()

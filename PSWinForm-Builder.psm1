@@ -66,25 +66,33 @@ function New-WinForm () {
             ValueFromPipelineByPropertyName = $true,
             HelpMessage = 'File contenaining form definition')]
         [string]$DefinitionFile,
-        [switch]$ShowWinForms,
+        [switch]$PassThru,
         [switch]$HideConsole,
         [Alias('Modules')][string[]]$PreloadModules
     )
     begin{
         Write-LogStep "Load Descriptor File",$DefinitionFile Wait
-        if ($HideConsole -and $ShowWinForms) {
+        $Global:Verbose = ($PSCmdlet.MyInvocation.BoundParameters -and $PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent)
+        if ($HideConsole -and !$PassThru) {
             if (-not ('Console.Window' -as [type])) {
                 Add-Type -Name Window -Namespace Console -MemberDefinition '[DllImport("Kernel32.dll")]public static extern IntPtr GetConsoleWindow();[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
             }
             $consolePtr = [Console.Window]::GetConsoleWindow()
             [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
         }
+        $Global:Modules = @()
+        $Global:FormModule = (Get-Item ((get-item $DefinitionFile).FullName -replace('.psd1','*.psm1'))).FullName
+        $Global:PSWinFormModule = (Get-Item ($PSCommandPath -replace('.psm1','_*.psm1'))).FullName
+        $Script:Modules += $PreloadModules
+        $Script:Modules += $Global:FormModule
+        $Script:Modules += $Global:PSWinFormModule
+        $Script:Modules = $Script:Modules | Sort-Object -Unique
+        # Write-Object $Script:Modules -foreGroundColor Green
     }
     process{
-
         # Get forms definition from file
         $FormDef = Import-PowerShellDataFile $DefinitionFile -SkipLimitCheck
-        $Script:ControlHandler = @{}
+        $Global:ControlHandler = @{}
         $Script:ThreadEventHandler = @{}
         
         if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
@@ -95,24 +103,36 @@ function New-WinForm () {
             $Form = New-WinFormControl -Type 'Form' -Definition $FormDef
             Write-Verbose "$Last$Space END!"
         }
-        
     }
-    
     end{
-        $PreloadModules += (get-item $DefinitionFile).FullName -replace('.psd1','.psm1')
-        foreach ($Module in $PreloadModules){
+
+        foreach ($Module in $Script:Modules){
             try {
                 Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Verbose:$false -Force
             } catch {
                 Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
             }
         }
-        
-        Write-LogStep "Form is available","Call with '`$Script:ControlHandler['$($Form.Name)'].ShowDialog()'" -mode ok
 
-        if ($ShowWinForms) {
-            $Form.ShowDialog()
+        Write-LogStep "Form is available","Call with '`$Global:ControlHandler['$($Form.Name)'].ShowDialog()'" -mode ok
+
+        if (!$PassThru) {
+            $MainTimer = New-Object System.Windows.Forms.Timer
+            $MainTimer.Interval = 1000
+            $MainTimer.add_Tick({ # on supprime les jobs terminé, toute les seconde
+                $Thread = Get-Job | ?{$_.Name -like 'PSWinForm_*' -and $_.State -eq 'Completed'}
+                if ($Global:Verbose) {
+                    $Thread | Receive-Job -Wait -AutoRemoveJob
+                } else {
+                    $Thread | Remove-Job
+                }
+            })
+            $MainTimer.Start() | Out-Null
+                $Form.ShowDialog()
             $Form.Dispose()
+            $MainTimer.Dispose()
+            $MainTimer.Enabled = $false
+            $MainTimer = $null
             if ($HideConsole) {
                 [Console.Window]::ShowWindow($consolePtr,9) | Out-Null
             }
@@ -136,32 +156,36 @@ function New-WinFormControl {
     } else {
         $i=0
         $Name = "${CurrentControlType}_$i"
-        while ($Script:ControlHandler[$Name]) {
+        while ($Global:ControlHandler[$Name]) {
             $i++
             $Name = "${CurrentControlType}_$i"
         }
     }
 
-    $Script:ControlHandler[$Name] = New-Object System.Windows.Forms.$CurrentControlType
-    $Script:ControlHandler[$Name].Name = $Name
+
+
+    $Global:ControlHandler[$Name] = New-Object System.Windows.Forms.$CurrentControlType
+    $Global:ControlHandler[$Name].Name = $Name
     Write-Verbose "$tabs$Plus$Space $('Name'.padright(18)) = '$($Name)'"
     # Construction des Properties
     foreach ($Key in $CurrentControlDef.Keys) {
         try {
             if (@('Name','Events','Childrens','ControlType') -notcontains $Key) {
                 Write-Verbose "$Tabs$Plus$Space $($Key.padright(18)) = '$($CurrentControlDef.$Key)'"
-                $Script:ControlHandler[$Name].$Key = $CurrentControlDef.$Key
-                if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent -and $isFirst -and $Key -eq 'Dock' -and $CurrentControlDef.$Key -ne 'Fill' -and @('Checkbox','InputBox') -notcontains $Children.ControlType) {
-                    Write-Color ("         $tabs$Pass  $Last$Space ","Prefer @{Dock = 'Fill'} for the fisrt children and Top,Bottom,Left,Right for the following") -ForegroundColor yellow, Magenta
+                $Global:ControlHandler[$Name].$Key = $CurrentControlDef.$Key
+                if ($Global:Verbose -and $isFirst -and $Key -eq 'Dock' -and $CurrentControlDef.$Key -ne 'Fill' -and @('Checkbox','InputBox') -notcontains $Children.ControlType) {
+                    Write-Color ("$tabs$Pass  $Last$Space ","Prefer @{Dock = 'Fill'} for the fisrt children and Top,Bottom,Left,Right for the following") -ForegroundColor DarkYellow, Magenta
                 }
             }
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
-            $ValidProperties = $Script:ControlHandler[$Name].PSobject.Properties.Name -join(', ~') -split('~')
+            $ValidProperties = $Global:ControlHandler[$Name].PSobject.Properties.Name -join(', ~') -split('~')
             Write-Host "[$Name] accepte only :" -ForegroundColor Red -NoNewline
             Write-Color $ValidProperties -ForeGroundColor Red,Magenta
         }
     }
+
+
 
     # Construction des Events
     if ($CurrentControlDef.Events.Keys){
@@ -169,25 +193,36 @@ function New-WinFormControl {
             try {
                 Write-Verbose "$Tabs$Plus$Space Event.On_$($Evt)()"
                 if ($CurrentControlDef.Events.$Evt -is [ScriptBlock] ) {
-                    $Script:ControlHandler[$Name]."Add_$($Evt)"( $CurrentControlDef.Events.$Evt )
+                    $Global:ControlHandler[$Name]."Add_$($Evt)"( $CurrentControlDef.Events.$Evt )
                 } elseif($CurrentControlDef.Events.$Evt -is [Hashtable]) {
-                    if($CurrentControlDef.Events.$Evt.type -eq 'Thread') {
+                    if($CurrentControlDef.Events.$Evt.Type -eq 'Thread') {
                         # Write-Host 'ThreadScriptBlock' -backgroundColor Magenta 
-                        $Script:ThreadEventHandler["$Name-$Evt"] = @{
-                            Name = "$Name-$Evt"
-                            # This = $Script:ControlHandler[$Name]
-                            ScriptBlock = $CurrentControlDef.Events.$Evt.ScriptBlock
+                        $ThreadName = "$Name-$Evt"
+                        $Script:ThreadEventHandler[$ThreadName] = @{
+                            Name = $ThreadName
+                            ScriptBlock = [Scriptblock]$CurrentControlDef.Events.$Evt.ScriptBlock
                         }
-                        $Script:ControlHandler[$Name]."Add_$($Evt)"({
-                            param($caller,$e)
-                            Start-ThreadJob -Name "$($this.Name)-$ThisEventName" -ScriptBlock $Script:ThreadEventHandler["$($this.Name)-$ThisEventName"].ScriptBlock
-                        })
+                        # Start-ThreadJob
+                        
+                        $ThreadScriptBlock = [scriptblock]::Create(
+                            "
+                            Invoke-EventTracer $Name 'Thread_$ThreadName'
+                            if (!(Get-Job -Name 'PSWinForm_$ThreadName' -ea 0)){
+                                Start-ThreadJob -Name 'PSWinForm_$ThreadName' ``
+                                    -InitializationScript {import-Module '$($Global:PSWinFormModule -join("', '"))','$($Global:FormModule -join("', '"))' -SkipEditionCheck -DisableNameChecking} ``
+                                    -ScriptBlock `$Script:ThreadEventHandler['$ThreadName'].ScriptBlock ``
+                                    -ArgumentList `$Global:ControlHandler,'$Name','$Evt' ``
+                                    -StreamingHost `$host
+                            }
+                            "
+                        ) # `$Script:ThreadEventHandler['$ThreadName'].ScriptBlock")
+                        $Global:ControlHandler[$Name]."Add_$($Evt)"($ThreadScriptBlock)
                     } else {}
                 } else {}
                 # Write-LogStep 'Event',"On_$($Evt)" ok
             } catch {
                 Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
-                $ValidEvents = ($Script:ControlHandler[$Name].PSobject.Methods.Name | Where-Object {
+                $ValidEvents = ($Global:ControlHandler[$Name].PSobject.Methods.Name | Where-Object {
                     $_ -match 'add_.+'
                 }) -replace('add_') -join(', ~') -split('~')
                 Write-Host "[$Name] accepte only : " -ForegroundColor Blue -NoNewline
@@ -195,6 +230,8 @@ function New-WinFormControl {
             }
         }
     }
+
+
 
     $FirstChild = $true
     # Construction des Childrens Controls
@@ -205,27 +242,27 @@ function New-WinFormControl {
             if ($Children.ControlType -match '^ToolStrip') {
                 if ($CurrentControlDef.ControlType -match '^ToolStrip') {
                     Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].DropDownItems.Add([$($Children.ControlType)].$($WinFormChildren.Name))"
-                    [void]$Script:ControlHandler[$Name].DropDownItems.Add($Script:ControlHandler[$WinFormChildren.Name])
+                    [void]$Global:ControlHandler[$Name].DropDownItems.Add($Global:ControlHandler[$WinFormChildren.Name])
                 } else {
                     Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].Items.Add([$($Children.ControlType)].$($WinFormChildren.Name))"
-                    [void]$Script:ControlHandler[$Name].Items.Add($Script:ControlHandler[$WinFormChildren.Name])
+                    [void]$Global:ControlHandler[$Name].Items.Add($Global:ControlHandler[$WinFormChildren.Name])
                 }
             } elseif($Children.ControlType -eq 'ContextMenuStrip') {
                 Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].ContextMenuStrip = [$($Children.ControlType)].$($WinFormChildren.Name)"
-                # [void]$Script:ControlHandler[$Name].Controls.Add($Script:ControlHandler[$WinFormChildren.Name])
-                $Script:ControlHandler[$Name].ContextMenuStrip = $Script:ControlHandler[$WinFormChildren.Name]
+                # [void]$Global:ControlHandler[$Name].Controls.Add($Global:ControlHandler[$WinFormChildren.Name])
+                $Global:ControlHandler[$Name].ContextMenuStrip = $Global:ControlHandler[$WinFormChildren.Name]
             } elseif($Children.ControlType -eq 'MenuStrip') {
                 Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].MainMenuStrip = [$($Children.ControlType)].$($WinFormChildren.Name)"
-                [void]$Script:ControlHandler[$Name].Controls.Add($Script:ControlHandler[$WinFormChildren.Name])
-                $Script:ControlHandler[$Name].MainMenuStrip = $Script:ControlHandler[$WinFormChildren.Name]
+                [void]$Global:ControlHandler[$Name].Controls.Add($Global:ControlHandler[$WinFormChildren.Name])
+                $Global:ControlHandler[$Name].MainMenuStrip = $Global:ControlHandler[$WinFormChildren.Name]
             } elseif($Children.ControlType -match '^(ColumnHeader|DataGridView\w+Column)$') {
                 Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].Columns = [$($Children.ControlType)].$($WinFormChildren.Name)"
-                [void]$Script:ControlHandler[$Name].Columns.Add($Script:ControlHandler[$WinFormChildren.Name])
+                [void]$Global:ControlHandler[$Name].Columns.Add($Global:ControlHandler[$WinFormChildren.Name])
             # } elseif($Children.ControlType -eq 'SplitterPanel') {
-            #     [void]$Script:ControlHandler[$Name]
+            #     [void]$Global:ControlHandler[$Name]
             } else {
                 Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].Controls.Add([$($Children.ControlType)].$($WinFormChildren.Name))"
-                [void]$Script:ControlHandler[$Name].Controls.Add($WinFormChildren)
+                [void]$Global:ControlHandler[$Name].Controls.Add($WinFormChildren)
             }
             # Write-LogStep "[$($Children.ControlType)]",'' ok
         } catch {
@@ -236,8 +273,8 @@ function New-WinFormControl {
         $FirstChild = $false
     }
 
-    # $Script:ControlHandler[$Name] | Write-Object -fore gray
-    $Script:ControlHandler[$Name]
+    # $Global:ControlHandler[$Name] | Write-Object -fore gray
+    $Global:ControlHandler[$Name]
 }
 
 
@@ -259,198 +296,13 @@ if (Get-Module PsWrite) {
 
 
 
+
+
+
+
 # New-ModuleManifest -Path 'C:\Users\alopez\Documents\PowerShell\Modules\PSWinForm-Builder\PSWinForm-Builder.psd1' `
 #                    -Author 'alban LOPEZ' `
 #                    -ModuleVersion '0.0.0.01' `
 #                    -CompanyName 'Lpz' `
 #                    -RootModule 'PSWinForm-Builder.psm1' `
 #                    -NestedModules PsWrite
-                   
-
-function Invoke-EventTracer {
-    param (
-        $ObjThis,
-        $EventType
-    )
-    if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
-        Write-Host $ObjThis.name,$EventType -ForegroundColor Magenta
-        # $ObjThis | Write-Object
-    }
-}
-function Update-ListView {
-    <#
-        .SYNOPSIS
-            Hydrate Une listView
-        .DESCRIPTION
-            [Descriptif en quelques lignes]
-        .PARAMETER Items
-            [PSCustomObject]@{
-                    FirstColValue    = 'xyz'
-                    NextValues  = 'xyz','xyz'
-                    Group   = 'xyz'
-                    Caption = 'Caption'
-                    Status  = if((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%'){'Warn'} # defini la couleur si commance par : Warn, Info, Title
-                    Shadow  = $false # gris clair
-                }
-        .EXAMPLE
-            [PSCustomObject]@{
-                    FirstColValue    = 'xyz'
-                    NextValues  = 'xyz','xyz'
-                    Group   = 'xyz'
-                    Caption = 'Caption'
-                    Status  = if((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%'){'Warn'} # defini la couleur si commance par : Warn, Info, Title
-                    Shadow  = $false # gris clair
-                } | Update-StdListView -listView $this
-        .NOTES
-        #>
-    [CmdletBinding()]
-    param (
-        [Parameter(ValueFromPipeline = $true)] $Items = $null,
-        $ListView
-    )
-    begin {
-        # $ListView.BeginUpdate() # SuspendLayout()
-    }
-    process {
-        foreach ($item in $items) {
-            # $Item | Write-Object -PassThru -foreGroundColor Magenta
-            if ($Item.FirstColValue) {
-                try {
-                    $NewLine = $ListView.items.Add("$($Item.FirstColValue)")
-                    if ($Item.NextValues) {
-                        $NewLine.SubItems.AddRange([string[]]$Item.NextValues) | out-null
-                    }
-                    # $NewLine.SubItems.AddRange("$($Item.Value)") | out-null
-                    # $NewLine.SubItems.Add("$($Item.Detail)") | out-null
-                    # $NewLine.group = $item.group
-                    if ( $item.group ) {
-                        $Grp = $ListView.Groups | Where-Object { $_.Header -like $Item.Group }
-                        if (!$grp) {
-                            $Grp = [System.Windows.Forms.ListViewGroup]@{ 'Header' = $Item.Group }
-                            $ListView.Groups.Add($Grp)
-                        }
-                        $NewLine.group = $Grp
-                    }
-
-                    $NewLine.ToolTipText = "$($Item.Caption)"
-                    if ($Item.Status -like 'Warn*' -or $Item.Caption -like "Warning`n*") { $NewLine.BackColor = 'LightSalmon' } # PeachPuff, LightSalmon, Tomato
-                    elseif ($Item.Status -like 'Info*' -or $Item.Caption -like "Info`n*") { $NewLine.BackColor = 'MediumSpringGreen' } # NavajoWhite
-                    elseif ($Item.Status -eq 'Title') { $NewLine.ForeColor = 'MidnightBlue' }
-                    if ($Item.Shadow) { $NewLine.foreColor = [System.Drawing.Color]::Gray }
-                } catch {
-                    $item | Write-Object -back black -fore red
-                    Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" '', $_ Error
-                }
-                # $l++
-            }
-            # Write-Object $item -backGroundColor Gray -fore Red
-        }
-    }
-    end {
-        $ListView.EndUpdate() # ResumeLayout()
-        # Write-logstep $ListView.FirstColValue,"$l Line Added" ok
-    }
-}
-function Set-ListViewSorted {
-    <#
-	.SYNOPSIS
-		Sort the ListView's item using the specified column.
-	.DESCRIPTION
-		Sort the ListView's item using the specified column.
-		This function uses Add-Type to define a class that sort the items.
-		The ListView's Tag property is used to keep track of the sorting.
-	.PARAMETER ListView
-		The ListView control to sort.
-	.PARAMETER ColumnIndex
-		The index of the column to use for sorting.
-	.PARAMETER SortOrder
-		The direction to sort the items. If not specified or set to None, it will toggle.
-
-	.EXAMPLE
-		Sort-ListViewColumn -ListView $listview1 -ColumnIndex 0
-
-	.NOTES
-		SAPIEN Technologies, Inc.
-		http://www.sapien.com/
-
-#>
-    param (
-        [ValidateNotNull()]
-        [Parameter(Mandatory = $true)]
-        [System.Windows.Forms.ListView]$ListView,
-        [Parameter(Mandatory = $true)]
-        [int]$ColumnIndex,
-        [System.Windows.Forms.SortOrder]$SortOrder = 'None'
-    )
-
-    if (($ListView.Items.Count -eq 0) -or ($ColumnIndex -lt 0) -or ($ColumnIndex -ge $ListView.Columns.Count)) {
-        return;
-    }
-
-    #region Define ListViewItemComparer
-    try {
-        $local:type = [ListViewItemComparer]
-    } catch {
-        Add-Type -ReferencedAssemblies ('System.Windows.Forms') -TypeDefinition  @"
-	using System;
-	using System.Windows.Forms;
-	using System.Collections;
-	public class ListViewItemComparer : IComparer
-	{
-	    public int column;
-	    public SortOrder sortOrder;
-	    public ListViewItemComparer()
-	    {
-	        column = 0;
-			sortOrder = SortOrder.Ascending;
-	    }
-	    public ListViewItemComparer(int column, SortOrder sort)
-	    {
-	        this.column = column;
-			sortOrder = sort;
-	    }
-	    public int Compare(object x, object y)
-	    {
-			if(column >= ((ListViewItem)x).SubItems.Count)
-				return  sortOrder == SortOrder.Ascending ? -1 : 1;
-
-			if(column >= ((ListViewItem)y).SubItems.Count)
-				return sortOrder == SortOrder.Ascending ? 1 : -1;
-
-			if(sortOrder == SortOrder.Ascending)
-	        	return String.Compare(((ListViewItem)x).SubItems[column].Text, ((ListViewItem)y).SubItems[column].Text);
-			else
-				return String.Compare(((ListViewItem)y).SubItems[column].Text, ((ListViewItem)x).SubItems[column].Text);
-	    }
-	}
-"@ | Out-Null
-    }
-    #endregion
-
-    if ($ListView.Tag -is [ListViewItemComparer]) {
-        #Toggle the Sort Order
-        if ($SortOrder -eq [System.Windows.Forms.SortOrder]::None) {
-            if ($ListView.Tag.column -eq $ColumnIndex -and $ListView.Tag.sortOrder -eq 'Ascending') {
-                $ListView.Tag.sortOrder = 'Descending'
-            }
-            else {
-                $ListView.Tag.sortOrder = 'Ascending'
-            }
-        }
-        else {
-            $ListView.Tag.sortOrder = $SortOrder
-        }
-
-        $ListView.Tag.column = $ColumnIndex
-        $ListView.Sort()#Sort the items
-    }
-    else {
-        if ($Sort -eq [System.Windows.Forms.SortOrder]::None) {
-            $Sort = [System.Windows.Forms.SortOrder]::Ascending
-        }
-
-        #Set to Tag because for some reason in PowerShell ListViewItemSorter prop returns null
-        $ListView.Tag = New-Object ListViewItemComparer ($ColumnIndex, $SortOrder)
-        $ListView.ListViewItemSorter = $ListView.Tag #Automatically sorts
-    }
-}

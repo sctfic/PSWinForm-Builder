@@ -1,40 +1,41 @@
-function Get-DNSBySamAccountName {
-    [CmdletBinding()]
-    param (
-        $prefix = '^(SRV|P|V)-'
-    )
-    begin {
-        # $Script:ControlHandler["Loading"].Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
-        # $Script:ControlHandler["Loading"].Enabled = $true
-        # $Script:ControlHandler["Loading"].Visible = $true
-        $Zone = ([System.DirectoryServices.ActiveDirectory.Domain]::getCurrentDomain()).Forest.name
-    }
-    process {
-        Get-ADComputer -Filter "DNSHostName -match `"$prefix`"" -Properties DNSHostName,IPv4Address -Server $Zone | %{
-            $ping = Ping $_.IPv4Address -ports 0 -loop 1
-            [PSCustomObject]@{
-                FirstColValue = $_.DNSHostName
-                NextValues    = $_.IPv4Address,"$($ping.ICMP) ms"
-                Group         = $null
-                Caption       = $_.SID.Value
-                Status        = if ($ping.status -ne '100%') { 'Warn' } # defini la couleur si commance par : Warn, Info, Title
-                Shadow        = $false # gris clair
-            }
-        }
-    }
-    end {
-        # $Script:ControlHandler["Loading"].Enabled = $false
-        # $Script:ControlHandler["Loading"].Visible = $false
-    }
-}
+Import-Module PsBright -Function ping
+# function Get-DNSBySamAccountName {
+#     [CmdletBinding()]
+#     param (
+#         $prefix = 'SRV-'
+#     )
+#     begin {
+#         # $Global:ControlHandler["Loading"].Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
+#         # $Global:ControlHandler["Loading"].Enabled = $true
+#         # $Global:ControlHandler["Loading"].Visible = $true
+#         $Zone = ([System.DirectoryServices.ActiveDirectory.Domain]::getCurrentDomain()).Forest.name
+#     }
+#     process {
+#         Get-ADComputer -Filter "DNSHostName -like `"$prefix`"" -Properties DNSHostName,IPv4Address -Server $Zone | %{
+#             $ping = Ping $_.IPv4Address -ports 0 -loop 1
+#             [PSCustomObject]@{
+#                 FirstColValue = $_.DNSHostName
+#                 NextValues    = $_.IPv4Address,"$($ping.ICMP) ms"
+#                 Group         = $null
+#                 Caption       = $_.SID.Value
+#                 Status        = if ($ping.status -ne '100%') { 'Warn' } # defini la couleur si commance par : Warn, Info, Title
+#                 Shadow        = $false # gris clair
+#             }
+#         }
+#     }
+#     end {
+#         # $Global:ControlHandler["Loading"].Enabled = $false
+#         # $Global:ControlHandler["Loading"].Visible = $false
+#     }
+# }
 function Get-DnsByName {
     param (
         [string]$prefix = '^(SRV|P|V)-'
     )
     begin{
-        # $Script:ControlHandler["Loading"].Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
-        # $Script:ControlHandler["Loading"].Enabled = $true
-        # $Script:ControlHandler["Loading"].Visible = $true
+        # $Global:ControlHandler["Loading"].Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
+        # $Global:ControlHandler["Loading"].Enabled = $true
+        # $Global:ControlHandler["Loading"].Visible = $true
         $Zone = ([System.DirectoryServices.ActiveDirectory.Domain]::getCurrentDomain()).Forest.name
     }
     process{
@@ -54,39 +55,26 @@ function Get-DnsByName {
         }
     }
     end {
-        # $Script:ControlHandler["Loading"].Enabled = $false
-        # $Script:ControlHandler["Loading"].Visible = $false
-    }
- }
- function Get-CheckBoxValue {
-    param(
-        [Parameter(ValueFromPipeline = $true)]
-        $checkBoxName
-    )
-    process {
-        if( $Script:ControlHandler[$checkBoxName].Checked) {
-            return $Script:ControlHandler[$checkBoxName].Tag
-        }
-    }
- }
- function Get-TextBoxValue {
-    param(
-        [Parameter(ValueFromPipeline = $true)]
-        $textBoxName
-    )
-    process {
-        if($Script:ControlHandler[$textBoxName].Text -ne '') {
-            return $Script:ControlHandler[$textBoxName].Text
-        }
+        # $Global:ControlHandler["Loading"].Enabled = $false
+        # $Global:ControlHandler["Loading"].Visible = $false
     }
  }
 function Get-Port2Ping {
-    Write-Host -fore Cyan 'Get-Port2Ping'
-    $Ports = @('Checkbox_SSH', 'Checkbox_RDP', 'Checkbox_JetDirect', 'Checkbox_ICMP' | Get-CheckBoxValue) + @((Get-TextBoxValue 'OtherPorts') -split(',;') | %{
-        Write-Host -fore Cyan $_
-        ($_ -as [int])
-    } | ?{$_}) -join(',')
-    Write-Host -fore Cyan $Ports
+    [Int16[]]$Ports = @()
+    $Ports = 'Checkbox_SSH', 'Checkbox_RDP', 'Checkbox_JetDirect', 'Checkbox_ICMP' | Get-CheckBoxValue | Where-Object {$null -ne $_} | %{($_ -as [int])}
+    $Ports +=  ('TextBox_OtherPorts' | Get-TextBoxValue) -split(';|,| |\.') | Where-Object {$_} | %{($_ -as [int])}
+    return ($Ports | Sort-Object -Unique)
+}
 
-    # return $Ports
+Write-Host $Module -fore DarkYellow
+
+if (Get-Module PsWrite) {
+    # Export-ModuleMember -Function Convert-RdSession, Get-RdSession
+    Write-LogStep 'Chargement du module ', $PSCommandPath ok
+} else {
+    function Script:Write-logstep {
+        param ( [string[]]$messages, $mode, $MaxWidth, $EachLength, $prefixe, $logTrace )
+        Write-Verbose "$($messages -join(',')) [$mode]"
+        # Write-LogStep '',"" ok
+    }
 }

@@ -9,53 +9,39 @@
             if (-not ('Console.Window' -as [type])) {
                 Add-Type -Name Window -Namespace Console -MemberDefinition '[DllImport("Kernel32.dll")]public static extern IntPtr GetConsoleWindow();[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
             }
-            $consolePtr = [Console.Window]::GetConsoleWindow()
+            $Script:consolePtr = [Console.Window]::GetConsoleWindow()
             if (!$PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
-                [Console.Window]::ShowWindow($consolePtr,0) | Out-Null
+                [Console.Window]::ShowWindow($Script:consolePtr,0) | Out-Null
             }
         }
         Activated    = @{
             Type='Thread'
-            ScriptBlock={
-                param($Caller, $e)
-                function Write-Host {
-                    # Wrapper for Write-Host in threads
-                    param(
-                        $object,
-                        [ConsoleColor]$foregroundColor,
-                        [ConsoleColor]$backgroundColor,
-                        [switch]$nonewline
-                    )
-                    if ($foregroundColor) {
-                        [Console]::ForegroundColor = $foregroundColor
+            ScriptBlock=[Scriptblock]{
+                param($ControlHandler, $ControllerName, $EventName)
+                # Invoke-EventTracer $ControllerName, "$ControllerName-$EventName"
+                $Tabs = $ControlHandler['TabsRessources']
+                $ListView = $($ControlHandler["$($Tabs.SelectedTab.Name)_LV"])
+                $listview.tag = $(Get-Date)
+                Invoke-EventTracer $Tabs.SelectedTab.Name $EventName
+                $ListView.Items.Clear()
+                $ControlHandler["Loading"].Visible = $true
+                $(switch ($Tabs.SelectedTab.Name) {
+                    'Routers' {
+                        Get-DnsByName -prefix 'RT-'
                     }
-                    elseif ($backgroundColor) {
-                        [Console]::BackgroundColor = $backgroundColor
+                    'Switchs' {
+                        Get-DnsByName -prefix 'SW-'
                     }
-                    [Console]::Write($object -join (', ')) | Out-Null
-                    if (!$nonewline) { [Console]::Write( "`n" ) | Out-Null }
-                    [Console]::ResetColor() | Out-Null
-                }
-                Write-Host 'ThreadEventHandler' -backgroundColor Magenta 
-                Write-Host 'ThreadEventHandler',$caller.name -backgroundColor Magenta 
-
-        #         Invoke-EventTracer $this 'Activated'
-        #         $Tabs = $Script:ControlHandler['TabsRessources']
-        #         $Script:ControlHandler["$($Tabs.SelectedTab.Name)_LV"].Items.Clear()
-        #         $Script:ControlHandler["Loading"].Visible = $true
-        #         $(switch ($Tabs.SelectedTab.Name) {
-        #             'Routers' {
-        #                 Get-DnsByName -prefix 'RT-'
-        #             }
-        #             'Switchs' {
-        #                 Get-DnsByName -prefix 'SW-'
-        #             }
-        #             'Servers' {
-        #                 Get-DnsBySamAccountName -prefix 'SRV-'
-        #             }
-        #             default {}
-        #         }) | Update-ListView -listView $Script:ControlHandler["$($Tabs.SelectedTab.Name)_LV"]
-        #         $Script:ControlHandler["Loading"].Visible = $false
+                    'Servers' {
+                        Get-DnsByName -prefix 'SRV-'
+                    }
+                    default {}
+                }) | Update-ListView -listView $ListView
+                $ControlHandler["Loading"].Visible = $false
+                # 1..30 | %{
+                #     Start-Sleep -m 100
+                #     Write-Host '.',"$ControllerName-$EventName" -fore Cyan -NoNewline
+                # }
             }
         }
         KeyDown = [Scriptblock]{ # Event
@@ -66,7 +52,10 @@
         }
         Closing = [Scriptblock]{ # Event
             Invoke-EventTracer $this 'Closing'
-            [Console.Window]::ShowWindow($consolePtr,5) | Out-Null
+            # Get-Job | ?{$_.Name -like 'PSWinForm_*'} | Remove-Job -Force
+            if ($Script:consolePtr) {
+                [Console.Window]::ShowWindow($Script:consolePtr,5) | Out-Null
+            }
         }
     }
     Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -74,24 +63,34 @@
             Name        = 'TabsRessources'
             Dock        = 'Fill'
             Enabled     = $True
-            Events      = @{
-                SelectedIndexChanged = [Scriptblock]{ # Event
-                    Invoke-EventTracer $this 'SelectedIndexChanged'
-                    $Script:ControlHandler["$($this.SelectedTab.Name)_LV"].Items.Clear()
-                    $Script:ControlHandler["Loading"].Visible = $true
-                    $(switch ($this.SelectedTab.Name) {
-                        'Routers' {
-                            Get-DnsByName -prefix 'RT-'
+            Events      =  @{
+                SelectedIndexChanged = @{
+                    Type = 'Thread'
+                    ScriptBlock = [Scriptblock]{
+                        param($ControlHandler, $ControllerName, $EventName)
+                        $Tabs = $ControlHandler[$ControllerName]
+                        $ListView = $($ControlHandler["$($Tabs.SelectedTab.Name)_LV"])
+                        # write-host  $listview.tag -fore Red
+                        if (!$listview.tag -or (get-date $listview.tag) -lt (get-date).AddMinutes(-1)) {
+                            $listview.tag = $(Get-Date)
+                            Invoke-EventTracer $Tabs.SelectedTab.Name $EventName
+                            $ListView.Items.Clear()
+                            $ControlHandler["Loading"].Visible = $true
+                            $(switch ($Tabs.SelectedTab.Name) {
+                                'Routers' {
+                                    Get-DnsByName -prefix 'RT-'
+                                }
+                                'Switchs' {
+                                    Get-DnsByName -prefix 'SW-'
+                                }
+                                'Servers' {
+                                    Get-DnsByName -prefix 'SRV-'
+                                }
+                                default {}
+                            }) | Update-ListView -listView $ListView
                         }
-                        'Switchs' {
-                            Get-DnsByName -prefix 'SW-'
-                        }
-                        'Servers' {
-                            Get-DnsBySamAccountName -prefix 'SRV-'
-                        }
-                        default {}
-                    }) | Update-ListView -listView $Script:ControlHandler["$($this.SelectedTab.Name)_LV"]
-                    $Script:ControlHandler["Loading"].Visible = $false
+                        $ControlHandler["Loading"].Visible = $false
+                    }
                 }
             }
             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -120,7 +119,11 @@
                                 }
                                 DoubleClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'DoubleClick'
-                                    Invoke-Expression "pwsh -NoProfile -NoLogo -Command 'ipmo PSBright -function ping; Ping $($this.focusedItem.SubItems[1].text) -ports @($(Get-Port2Ping -verbose)) | Out-GridView'"
+                                    start-threadJob -Name "PSWinForm_$IP" {
+                                        param($IP,$Ports)
+                                        Import-Module PSBright -function ping
+                                        Ping $IP -ports $Ports | Out-GridView
+                                    } -ArgumentList @($this.focusedItem.SubItems[1].text,(Get-Port2Ping))
                                 }
                             }
                             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -168,7 +171,11 @@
                                 }
                                 DoubleClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'DoubleClick'
-                                    Invoke-Expression "pwsh -NoProfile -NoLogo -Command 'ipmo PSBright -function ping; Ping $($this.focusedItem.SubItems[1].text) -ports @($(Get-Port2Ping -verbose)) | Out-GridView'"
+                                    start-threadJob -Name "PSWinForm_$IP" {
+                                        param($IP,$Ports)
+                                        Import-Module PSBright -function ping
+                                        Ping $IP -ports $Ports | Out-GridView
+                                    } -ArgumentList @($this.focusedItem.SubItems[1].text,(Get-Port2Ping))
                                 }
                             }
                             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -216,7 +223,11 @@
                                 }
                                 DoubleClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'DoubleClick'
-                                    Invoke-Expression "pwsh -NoProfile -NoLogo -Command 'ipmo PSBright -function ping; Ping $($this.focusedItem.SubItems[1].text) -ports @($(Get-Port2Ping -verbose)) | Out-GridView'"
+                                    start-threadJob -Name "PSWinForm_$IP" {
+                                        param($IP,$Ports)
+                                        Import-Module PSBright -function ping
+                                        Ping $IP -ports $Ports | Out-GridView
+                                    } -ArgumentList @($this.focusedItem.SubItems[1].text,(Get-Port2Ping))
                                 }
                             }
                             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
