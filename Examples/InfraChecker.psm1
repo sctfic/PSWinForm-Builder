@@ -66,6 +66,33 @@ function Get-Port2Ping {
     return ($Ports | Sort-Object -Unique)
 }
 
+
+$Global:MainTabsScriptBlock = [Scriptblock]{
+    param($ControlHandler, $ControllerName, $EventName)
+    $Tabs = $ControlHandler['TabsRessources']
+    $ListView = $($ControlHandler["$($Tabs.SelectedTab.Name)_LV"])
+    # write-host  $listview.tag -fore Red
+    if (!$listview.tag -or (get-date $listview.tag) -lt (get-date).AddMinutes(-1)) {
+        $listview.tag = $(Get-Date)
+        Invoke-EventTracer $Tabs.SelectedTab.Name $EventName
+        $ListView.Items.Clear()
+        $ControlHandler["Loading"].Visible = $true
+        $(switch ($Tabs.SelectedTab.Name) {
+            'Routers' {
+                Get-DnsByName -prefix 'RT-'
+            }
+            'Switchs' {
+                Get-DnsByName -prefix 'SW-'
+            }
+            'Servers' {
+                Get-DnsByName -prefix 'SRV-'
+            }
+            default {}
+        }) | Update-ListView -listView $ListView
+    }
+    $ControlHandler["Loading"].Visible = $false
+}
+
 Write-Host $Module -fore DarkYellow
 
 if (Get-Module PsWrite) {

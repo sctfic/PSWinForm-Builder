@@ -16,33 +16,7 @@
         }
         Activated    = @{
             Type='Thread'
-            ScriptBlock=[Scriptblock]{
-                param($ControlHandler, $ControllerName, $EventName)
-                # Invoke-EventTracer $ControllerName, "$ControllerName-$EventName"
-                $Tabs = $ControlHandler['TabsRessources']
-                $ListView = $($ControlHandler["$($Tabs.SelectedTab.Name)_LV"])
-                $listview.tag = $(Get-Date)
-                Invoke-EventTracer $Tabs.SelectedTab.Name $EventName
-                $ListView.Items.Clear()
-                $ControlHandler["Loading"].Visible = $true
-                $(switch ($Tabs.SelectedTab.Name) {
-                    'Routers' {
-                        Get-DnsByName -prefix 'RT-'
-                    }
-                    'Switchs' {
-                        Get-DnsByName -prefix 'SW-'
-                    }
-                    'Servers' {
-                        Get-DnsByName -prefix 'SRV-'
-                    }
-                    default {}
-                }) | Update-ListView -listView $ListView
-                $ControlHandler["Loading"].Visible = $false
-                # 1..30 | %{
-                #     Start-Sleep -m 100
-                #     Write-Host '.',"$ControllerName-$EventName" -fore Cyan -NoNewline
-                # }
-            }
+            ScriptBlock=$Global:MainTabsScriptBlock
         }
         KeyDown = [Scriptblock]{ # Event
             Invoke-EventTracer $this 'KeyDown'
@@ -66,31 +40,7 @@
             Events      =  @{
                 SelectedIndexChanged = @{
                     Type = 'Thread'
-                    ScriptBlock = [Scriptblock]{
-                        param($ControlHandler, $ControllerName, $EventName)
-                        $Tabs = $ControlHandler[$ControllerName]
-                        $ListView = $($ControlHandler["$($Tabs.SelectedTab.Name)_LV"])
-                        # write-host  $listview.tag -fore Red
-                        if (!$listview.tag -or (get-date $listview.tag) -lt (get-date).AddMinutes(-1)) {
-                            $listview.tag = $(Get-Date)
-                            Invoke-EventTracer $Tabs.SelectedTab.Name $EventName
-                            $ListView.Items.Clear()
-                            $ControlHandler["Loading"].Visible = $true
-                            $(switch ($Tabs.SelectedTab.Name) {
-                                'Routers' {
-                                    Get-DnsByName -prefix 'RT-'
-                                }
-                                'Switchs' {
-                                    Get-DnsByName -prefix 'SW-'
-                                }
-                                'Servers' {
-                                    Get-DnsByName -prefix 'SRV-'
-                                }
-                                default {}
-                            }) | Update-ListView -listView $ListView
-                        }
-                        $ControlHandler["Loading"].Visible = $false
-                    }
+                    ScriptBlock = $Global:MainTabsScriptBlock
                 }
             }
             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -266,75 +216,118 @@
                 }
             }
         },
-        @{  ControlType = 'GroupBox'
-            Text        = 'Option'
+        @{  ControlType = 'TabControl'
             Dock        = 'Bottom'
             Height      = 150
-            Events      = @{}
+            Events      = @{
+            }
             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
-                @{  ControlType = 'Panel'
-                    Dock        = 'Top'
+                @{  ControlType = 'TabPage'
+                    Name        = 'OptionsPing'
+                    Text        = 'Options du Ping'
+                    Dock        = 'Fill'
                     Events      = @{}
                     Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
-                        @{  ControlType = 'Label'
-                            Text        = 'OtherPorts'
+                        @{  ControlType = 'Checkbox'
+                            Name        = 'Checkbox_Refresh'
+                            Text        = "Rafrechir la liste a chaque changement d'onglet"
                             Dock        = 'Fill'
+                            Checked     = $True
+                            Events      = @{}
                         },
-                        @{  ControlType = 'TextBox'
-                            Name        = 'TextBox_OtherPorts'
-                            Dock        = 'Right'
-                            Events      = @{
-                                TextChanged    = [Scriptblock]{ # Event
-                                    Invoke-EventTracer $this 'TextChanged'
-                                }
-                            }
+                        @{  ControlType = 'ComboBox'
+                            Name        = 'ComboBox_Speed'
+                            Text        = 'Ping Intervale (ms)'
+                            Dock        = 'Top'
+                            Items       = @(250,500,1000,2000,4000,10000)
+                            Events      = @{}
+                        },
+                        @{  ControlType = 'ComboBox'
+                            Name        = 'ComboBox_Charge'
+                            Text        = 'Charge ICMP (Octets)'
+                            Dock        = 'Top'
+                            Items       = @(32,256,1024,4096,16384,65536)
+                            Events      = @{}
                         }
                     )
                 },
-                @{  ControlType = 'Checkbox'
-                    Name        = 'Checkbox_SSH'
-                    Text        = 'SSH (22), souvent ouvert sur les equipement linux'
-                    Tag         = 22
-                    Dock        = 'Top'
-                    Events      = @{
-                        CheckedChanged    = [Scriptblock]{ # Event
-                            Invoke-EventTracer $this 'CheckedChanged'
+                @{  ControlType = 'TabPage'
+                    Name        = 'PortsPing'
+                    Text        = 'Ports du Ping'
+                    Dock        = 'Fill'
+                    Events      = @{}
+                    Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
+                        @{  ControlType = 'Panel'
+                            Dock        = 'Fill'
+                            Events      = @{}
+                            Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
+                                @{  ControlType = 'Panel'
+                                    Dock        = 'Top'
+                                    Events      = @{}
+                                    Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
+                                        @{  ControlType = 'Label'
+                                            Text        = 'OtherPorts'
+                                            Dock        = 'Fill'
+                                        },
+                                        @{  ControlType = 'TextBox'
+                                            Name        = 'TextBox_OtherPorts'
+                                            Dock        = 'Right'
+                                            Events      = @{
+                                                TextChanged    = [Scriptblock]{ # Event
+                                                    Invoke-EventTracer $this 'TextChanged'
+                                                }
+                                            }
+                                        }
+                                    )
+                                },
+                                @{  ControlType = 'Checkbox'
+                                    Name        = 'Checkbox_SSH'
+                                    Text        = 'SSH (22), souvent ouvert sur les equipements linux'
+                                    Tag         = 22
+                                    Dock        = 'Top'
+                                    Events      = @{
+                                        CheckedChanged    = [Scriptblock]{ # Event
+                                            Invoke-EventTracer $this 'CheckedChanged'
+                                        }
+                                    }
+                                },
+                                @{  ControlType = 'Checkbox'
+                                    Name        = 'Checkbox_RDP'
+                                    Text        = 'RDP (3389), ouvert sur les serveur Windows, parfois sur les postes client'
+                                    Tag         = 3389
+                                    Dock        = 'Top'
+                                    Events      = @{
+                                        CheckedChanged    = [Scriptblock]{ # Event
+                                            Invoke-EventTracer $this 'CheckedChanged'
+                                        }
+                                    }
+                                },
+                                @{  ControlType = 'Checkbox'
+                                    Name        = 'Checkbox_JetDirect'
+                                    Text        = "JetDirect (9100), flux d'impression sur les imprimante et copieurs"
+                                    Tag         = 9100
+                                    Dock        = 'Top'
+                                    Events      = @{
+                                        CheckedChanged    = [Scriptblock]{ # Event
+                                            Invoke-EventTracer $this 'CheckedChanged'
+                                        }
+                                    }
+                                },
+                                @{  ControlType = 'Checkbox'
+                                    Name        = 'Checkbox_ICMP'
+                                    Text        = 'ICMP, canal pour le Protocole de Controle Internet'
+                                    Tag         = 0
+                                    Dock        = 'Top'
+                                    Checked     = $True
+                                    Events      = @{
+                                        CheckedChanged    = [Scriptblock]{ # Event
+                                            Invoke-EventTracer $this 'CheckedChanged'
+                                        }
+                                    }
+                                }
+                            )
                         }
-                    }
-                },
-                @{  ControlType = 'Checkbox'
-                    Name        = 'Checkbox_RDP'
-                    Text        = 'RDP (3389), ouvert sur les serveur Windows, parfois sur les postes client'
-                    Tag         = 3389
-                    Dock        = 'Top'
-                    Events      = @{
-                        CheckedChanged    = [Scriptblock]{ # Event
-                            Invoke-EventTracer $this 'CheckedChanged'
-                        }
-                    }
-                },
-                @{  ControlType = 'Checkbox'
-                    Name        = 'Checkbox_JetDirect'
-                    Text        = "JetDirect (9100), flux d'impression sur les copieurs"
-                    Tag         = 9100
-                    Dock        = 'Top'
-                    Events      = @{
-                        CheckedChanged    = [Scriptblock]{ # Event
-                            Invoke-EventTracer $this 'CheckedChanged'
-                        }
-                    }
-                },
-                @{  ControlType = 'Checkbox'
-                    Name        = 'Checkbox_ICMP'
-                    Text        = 'ICMP, canal pour le Protocole de Controle Internet'
-                    Tag         = 0
-                    Dock        = 'Top'
-                    Checked     = $True
-                    Events      = @{
-                        CheckedChanged    = [Scriptblock]{ # Event
-                            Invoke-EventTracer $this 'CheckedChanged'
-                        }
-                    }
+                    )
                 }
             )
         }

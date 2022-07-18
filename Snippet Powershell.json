@@ -132,19 +132,26 @@
 			"    ShowItemToolTips = 'True'",
 			"    View             = 'Details'",
 			"    Events      = @{",
-			"        Enter    = [Scriptblock]{ # Event",
-			"            Invoke-EventTracer \\$this 'Enter'",
-			"            1..9 | %{",
-			"                [PSCustomObject]@{",
-			"                    FirstColValue = (Get-Random 100)",
-			"                    NextValues = (Get-Random 'Value1', 'Value2', 'Value0','Value3'),(Get-Random 'Value1', 'Value2', 'Value0','Value3')",
-			"                    Group   = (Get-Random 'Grp1', 'Grp2', 'Grp0','')",
-			"                    Caption = 'Caption '",
-			"                    Status  = (Get-Random 'Warn', 'Info', 'Title','')",
-			"                    Shadow  = (Get-Random \\$true, \\$false) # gris clair",
+			"        Enter    = @{ # Event",
+			"            Type = 'Thread'",
+			"            ScriptBlock = [Scriptblock]{",
+			"                param(\\$ControlHandler, \\$ControllerName, \\$EventName)",
+			"                \\$Tabs = \\$ControlHandler['TabsRessources']",
+			"                \\$ListView = \\$(\\$ControlHandler[\"\\$(\\$Tabs.SelectedTab.Name)_LV\"])",
+			"                if (!\\$listview.tag -or (get-date \\$listview.tag) -lt (get-date).AddMinutes(-1)) {",
+			"                    \\$listview.tag = \\$(Get-Date)",
+			"                    Invoke-EventTracer \\$Tabs.SelectedTab.Name \\$EventName",
+			"                    \\$ListView.Items.Clear()",
+			"                            [PSCustomObject]@{",
+			"                                FirstColValue = (Get-Random 100)",
+			"                                NextValues = (Get-Random 'Value1', 'Value2', 'Value0','Value3'),(Get-Random 'Value1', 'Value2', 'Value0','Value3')",
+			"                                Group   = (Get-Random 'Grp1', 'Grp2', 'Grp0','')",
+			"                                Caption = 'Caption infos'",
+			"                                Status  = (Get-Random 'Warn', 'Info', 'Title','')",
+			"                                Shadow  = (Get-Random \\$true, \\$false) # gris clair",
+			"                            } | Update-ListView -listView \\$ListView",
 			"                }",
-			"            } | Update-ListView -listView \\$this",
-			"            ",
+			"            }",
 			"        }",
 			"        ColumnClick    = [Scriptblock]{ # Event",
 			"            Invoke-EventTracer \\$this 'ColumnClick'",
@@ -503,22 +510,6 @@
 		],
 		"description": "Checkbox structure for descriptor file WinForms.psd1"
 	},
-	"ListBox": {
-		"prefix": "ListBox",
-		"body": [
-			"@{  ControlType = 'ListBox'",
-			"    Name        = 'ListBox_${1:label}'",
-			"    Text        = '${1:label}'",
-			"    Dock        = 'Top'",
-			"    Events      = @{",
-			"        DoubleClick    = [Scriptblock]{ # Event",
-			"            Invoke-EventTracer \\$this 'DoubleClick'",
-			"        }",
-			"    }",
-			"}"
-		],
-		"description": "ListBox structure for descriptor file WinForms.psd1"
-	},
 	"RichTextBox": {
 		"prefix": "RichTextBox",
 		"body": [
@@ -605,6 +596,40 @@
 		],
 		"description": "Button structure for descriptor file WinForms.psd1"
 	},
+	"ComboBox": {
+		"prefix": "ComboBox",
+		"body": [
+			"@{  ControlType = 'ComboBox'",
+			"    Name        = 'ComboBox_${1:label}'",
+			"    Text        = '${1:label}'",
+			"    Dock        = 'Bottom'",
+			"    Items       = @('un','deux','trois')",
+			"    Events      = @{",
+			"        Click    = [Scriptblock]{ # Event",
+			"            Invoke-EventTracer \\$this 'Click'",
+			"        }",
+			"    }",
+			"}"
+		],
+		"description": "ComboBox structure for descriptor file WinForms.psd1"
+	},
+	"ListBox": {
+		"prefix": "ListBox",
+		"body": [
+			"@{  ControlType = 'ListBox'",
+			"    Name        = 'ListBox_${1:label}'",
+			"    Text        = '${1:label}'",
+			"    Dock        = 'Bottom'",
+			"    Items       = @('un','deux','trois')",
+			"    Events      = @{",
+			"        Click    = [Scriptblock]{ # Event",
+			"            Invoke-EventTracer \\$this 'Click'",
+			"        }",
+			"    }",
+			"}"
+		],
+		"description": "ListBox structure for descriptor file WinForms.psd1"
+	},
 	"ProgressBar": {
 		"prefix": "ProgressBar",
 		"body": [
@@ -616,5 +641,33 @@
 			"}"
 		],
 		"description": "ProgressBar structure for descriptor file WinForms.psd1"
+	},
+	"ScriptBlock": {
+		"prefix": "[ScriptBlock]",
+		"body": [
+			"[ScriptBlock]{",
+			"    Invoke-EventTracer \\$this '${1:EventType}'",
+			"    start-threadJob -Name \"PSWinForm_\\$${1:EventType}\" -InitializationScript {Import-Module PSBright -function ping} {",
+			"        param(\\$IP,\\$Ports)",
+			"        Ping $IP -ports $Ports | Out-GridView",
+			"    } -ArgumentList @('8.8.8.8',@(0,53))",
+			"}"
+		],
+		"description": "ScriptBlock with anonymous Thread structure for descriptor file WinForms.psd1"
+	},
+	"Thread": {
+		"prefix": "Thread",
+		"body": [
+			"@{",
+			"    Type = 'Thread'",
+			"    ScriptBlock = [ScriptBlock]{",
+			"    param(\\$ControlHandler, \\$ControllerName, \\$EventName)",
+			"    \\$ThisMe = \\$ControlHandler[\\$ControllerName]",
+			"    Invoke-EventTracer \\$ThisMe $EventName",
+			"    ",
+			"    }",
+			"}"
+		],
+		"description": "Thread interacts with form, structure for descriptor file WinForms.psd1"
 	}
 }

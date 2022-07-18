@@ -87,6 +87,13 @@ function New-WinForm () {
         $Script:Modules += $Global:FormModule
         $Script:Modules += $Global:PSWinFormModule
         $Script:Modules = $Script:Modules | Sort-Object -Unique
+        foreach ($Module in $Script:Modules){
+            try {
+                Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Verbose:$false -Force
+            } catch {
+                Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+            }
+        }
         # Write-Object $Script:Modules -foreGroundColor Green
     }
     process{
@@ -105,15 +112,6 @@ function New-WinForm () {
         }
     }
     end{
-
-        foreach ($Module in $Script:Modules){
-            try {
-                Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Verbose:$false -Force
-            } catch {
-                Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
-            }
-        }
-
         Write-LogStep "Form is available","Call with '`$Global:ControlHandler['$($Form.Name)'].ShowDialog()'" -mode ok
 
         if (!$PassThru) {
@@ -121,11 +119,11 @@ function New-WinForm () {
             $MainTimer.Interval = 1000
             $MainTimer.add_Tick({ # on supprime les jobs terminé, toute les seconde
                 $Thread = Get-Job | ?{$_.Name -like 'PSWinForm_*' -and $_.State -eq 'Completed'}
-                if ($Global:Verbose) {
-                    $Thread | Receive-Job -Wait -AutoRemoveJob
-                } else {
+                # if ($Global:Verbose) {
+                #     $Thread | Receive-Job -Wait -AutoRemoveJob
+                # } else {
                     $Thread | Remove-Job
-                }
+                # }
             })
             $MainTimer.Start() | Out-Null
                 $Form.ShowDialog()
@@ -170,12 +168,15 @@ function New-WinFormControl {
     # Construction des Properties
     foreach ($Key in $CurrentControlDef.Keys) {
         try {
-            if (@('Name','Events','Childrens','ControlType') -notcontains $Key) {
-                Write-Verbose "$Tabs$Plus$Space $($Key.padright(18)) = '$($CurrentControlDef.$Key)'"
+            if (@('Name','Events','Childrens','ControlType','Items') -notcontains $Key) {
                 $Global:ControlHandler[$Name].$Key = $CurrentControlDef.$Key
+                Write-Verbose "$Tabs$Plus$Space $($Key.padright(18)) = '$($CurrentControlDef.$Key)'"
                 if ($Global:Verbose -and $isFirst -and $Key -eq 'Dock' -and $CurrentControlDef.$Key -ne 'Fill' -and @('Checkbox','InputBox') -notcontains $Children.ControlType) {
                     Write-Color ("$tabs$Pass  $Last$Space ","Prefer @{Dock = 'Fill'} for the fisrt children and Top,Bottom,Left,Right for the following") -ForegroundColor DarkYellow, Magenta
                 }
+            } elseif ('Items' -eq $Key) {
+                $Global:ControlHandler[$Name].Items.AddRange($CurrentControlDef.$Key)
+                Write-Verbose "$Tabs$Plus$Space $($Key.padright(18)) = $($CurrentControlDef.$Key -join(','))"
             }
         } catch {
             Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
@@ -258,8 +259,9 @@ function New-WinFormControl {
             } elseif($Children.ControlType -match '^(ColumnHeader|DataGridView\w+Column)$') {
                 Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].Columns = [$($Children.ControlType)].$($WinFormChildren.Name)"
                 [void]$Global:ControlHandler[$Name].Columns.Add($Global:ControlHandler[$WinFormChildren.Name])
-            # } elseif($Children.ControlType -eq 'SplitterPanel') {
-            #     [void]$Global:ControlHandler[$Name]
+            # } elseif(@('ComboBox','ListBox') -contains $Children.ControlType) {
+                # Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].Items.Add([$($Children.ControlType)].$($WinFormChildren.Name))"
+            #     [void]$Global:ControlHandler[$Name].Items.Add($Global:ControlHandler[$WinFormChildren.Name])
             } else {
                 Write-Verbose "$Pass  $tabs$Last$Space [$($CurrentControlDef.ControlType)].Controls.Add([$($Children.ControlType)].$($WinFormChildren.Name))"
                 [void]$Global:ControlHandler[$Name].Controls.Add($WinFormChildren)
