@@ -65,7 +65,17 @@ function Get-Port2Ping {
     $Ports +=  ('TextBox_OtherPorts' | Get-TextBoxValue) -split(';|,| |\.') | Where-Object {$_} | %{($_ -as [int])}
     return ($Ports | Sort-Object -Unique)
 }
-
+function Get-ComboBoxValue {
+    param (
+        $ComboboxName, $defaultValue
+    )
+    # Write-Color $ComboboxName,$Global:ControlHandler[$ComboboxName].SelectedItem,$Global:ControlHandler[$ComboboxName].Selectedindex -ForeGroundColor Blue,Red,Green
+    if ($Global:ControlHandler[$ComboboxName].SelectedItem) {
+        $Global:ControlHandler[$ComboboxName].SelectedItem
+    } else {
+        $defaultValue
+    }
+}
 
 $Global:MainTabsScriptBlock = [Scriptblock]{
     param($ControlHandler, $ControllerName, $EventName)

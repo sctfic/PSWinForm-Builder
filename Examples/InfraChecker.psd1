@@ -70,10 +70,10 @@
                                 DoubleClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'DoubleClick'
                                     start-threadJob -Name "PSWinForm_$IP" {
-                                        param($IP,$Ports)
+                                        param($IP,$Ports,$Intervale,$icmpSize)
                                         Import-Module PSBright -function ping
-                                        Ping $IP -ports $Ports | Out-GridView
-                                    } -ArgumentList @($this.focusedItem.SubItems[1].text,(Get-Port2Ping))
+                                        Ping $IP -ports $Ports -intervale $Intervale -size $icmpSize | Out-GridView -Title "Ping $IP -port $ports -intervele $intervale -size $icmpSize"
+                                    } -ArgumentList @($this.focusedItem.SubItems[0].text,(Get-Port2Ping),(Get-ComboBoxValue 'ComboBox_Speed' 2000),(Get-ComboBoxValue 'ComboBox_Charge' 32))
                                 }
                             }
                             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -122,10 +122,10 @@
                                 DoubleClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'DoubleClick'
                                     start-threadJob -Name "PSWinForm_$IP" {
-                                        param($IP,$Ports)
+                                        param($IP,$Ports,$Intervale,$icmpSize)
                                         Import-Module PSBright -function ping
-                                        Ping $IP -ports $Ports | Out-GridView
-                                    } -ArgumentList @($this.focusedItem.SubItems[1].text,(Get-Port2Ping))
+                                        Ping $IP -ports $Ports -intervale $Intervale -size $icmpSize | Out-GridView -Title "Ping $IP -port $ports -intervele $intervale -size $icmpSize"
+                                    } -ArgumentList @($this.focusedItem.SubItems[0].text,(Get-Port2Ping),(Get-ComboBoxValue 'ComboBox_Speed' 2000),(Get-ComboBoxValue 'ComboBox_Charge' 32))
                                 }
                             }
                             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -174,10 +174,10 @@
                                 DoubleClick    = [Scriptblock]{ # Event
                                     Invoke-EventTracer $this 'DoubleClick'
                                     start-threadJob -Name "PSWinForm_$IP" {
-                                        param($IP,$Ports)
+                                        param($IP,$Ports,$Intervale,$icmpSize)
                                         Import-Module PSBright -function ping
-                                        Ping $IP -ports $Ports | Out-GridView
-                                    } -ArgumentList @($this.focusedItem.SubItems[1].text,(Get-Port2Ping))
+                                        Ping $IP -ports $Ports -intervale $Intervale -size $icmpSize | Out-GridView -Title "Ping $IP -port $ports -intervele $intervale -size $icmpSize"
+                                    } -ArgumentList @($this.focusedItem.SubItems[0].text,(Get-Port2Ping),(Get-ComboBoxValue 'ComboBox_Speed' 2000),(Get-ComboBoxValue 'ComboBox_Charge' 32))
                                 }
                             }
                             Childrens   = @( # FirstControl need {Dock = 'Fill'} but the following will be [Top, Bottom, Left, Right]
@@ -237,17 +237,25 @@
                         },
                         @{  ControlType = 'ComboBox'
                             Name        = 'ComboBox_Speed'
-                            Text        = 'Ping Intervale (ms)'
                             Dock        = 'Top'
                             Items       = @(250,500,1000,2000,4000,10000)
+                            SelectedIndex = 4
                             Events      = @{}
+                        },
+                        @{  ControlType = 'label'
+                            Text        = 'Ping Intervale (ms)'
+                            Dock        = 'Top'
                         },
                         @{  ControlType = 'ComboBox'
                             Name        = 'ComboBox_Charge'
+                            Dock        = 'Top'
+                            Items       = @(32,256,1024,4096,8192,16384,32768,65536)
+                            SelectedIndex = 0
+                            Events      = @{}
+                        },
+                        @{  ControlType = 'label'
                             Text        = 'Charge ICMP (Octets)'
                             Dock        = 'Top'
-                            Items       = @(32,256,1024,4096,16384,65536)
-                            Events      = @{}
                         }
                     )
                 },
