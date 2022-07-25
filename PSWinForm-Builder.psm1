@@ -274,7 +274,6 @@ function New-WinFormControl {
         }
         $FirstChild = $false
     }
-
     # $Global:ControlHandler[$Name] | Write-Object -fore gray
     $Global:ControlHandler[$Name]
 }
@@ -286,7 +285,7 @@ Add-Type -AssemblyName System.Drawing
 
 if (Get-Module PsWrite) {
     # Export-ModuleMember -Function Convert-RdSession, Get-RdSession
-    Write-LogStep 'Chargement du module ', $PSCommandPath ok
+    Write-LogStep 'Chargement du module ',$PSCommandPath ok
 } else {
     function Script:Write-logstep {
         param ( [string[]]$messages, $mode, $MaxWidth, $EachLength, $prefixe, $logTrace )
@@ -294,17 +293,3 @@ if (Get-Module PsWrite) {
         # Write-LogStep '',"" ok
     }
 }
-
-
-
-
-
-
-
-
-# New-ModuleManifest -Path 'C:\Users\alopez\Documents\PowerShell\Modules\PSWinForm-Builder\PSWinForm-Builder.psd1' `
-#                    -Author 'alban LOPEZ' `
-#                    -ModuleVersion '0.0.0.01' `
-#                    -CompanyName 'Lpz' `
-#                    -RootModule 'PSWinForm-Builder.psm1' `
-#                    -NestedModules PsWrite

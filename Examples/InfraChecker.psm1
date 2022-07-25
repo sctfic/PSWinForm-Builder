@@ -103,8 +103,6 @@ $Global:MainTabsScriptBlock = [Scriptblock]{
     $ControlHandler["Loading"].Visible = $false
 }
 
-Write-Host $Module -fore DarkYellow
-
 if (Get-Module PsWrite) {
     # Export-ModuleMember -Function Convert-RdSession, Get-RdSession
     Write-LogStep 'Chargement du module ', $PSCommandPath ok

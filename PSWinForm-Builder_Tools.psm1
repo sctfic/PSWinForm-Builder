@@ -101,6 +101,45 @@ function Set-ListViewSorted {
         $ListView.ListViewItemSorter = $ListView.Tag #Automatically sorts
     }
 }
+
+function Update-TreeView {
+    [CmdletBinding()]
+    param (
+        [Parameter(ValueFromPipeline = $true)] $Items = $null,
+        $treeNode,
+        [scriptblock]$ChildrenScriptBlock = $null,
+        $Depth = 1,
+        [switch]$Clear
+    )
+    begin {
+        if ($Clear) {
+            $treeNode.Nodes.Clear()
+        }
+    }
+    process {
+
+        foreach($item in $Items){
+            $childNode = [System.Windows.Forms.TreeNode]@{
+                'Text'        = $(if($Item.Name) {$Item.Name} else {$Item})
+                'Tag'         = $(if($Item.Handler) {$Item.Handler} else {$null})
+                'ForeColor'   = $(if($Item.ForeColor -is [system.Drawing.Color]) {$Item.ForeColor} else {[system.Drawing.Color]::Black})
+                'BackColor'   = $(if($Item.BackColor -is [system.Drawing.Color]) {$Item.BackColor} else {[system.Drawing.Color]::White})
+                'ToolTipText' = $(if($Item.Infos) {$Item.Infos} else {$null})
+            }
+            if ($depth -gt 0 -and $ChildrenScriptBlock) {
+                Invoke-Command -ScriptBlock $ChildrenScriptBlock -ArgumentList $item -ea SilentlyContinue | Update-TreeView -treeNode $childNode -ChildrenScriptBlock $ChildrenScriptBlock -Depth ($Depth-1)
+            }
+            [System.Void]$treeNode.Nodes.Add($childNode)
+        }
+    }
+    end {
+        $treeNode
+    }
+}
+
+
+
+
 function Update-ListView {
     <#
         .SYNOPSIS

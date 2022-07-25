@@ -232,7 +232,8 @@
                             Name        = 'Checkbox_Refresh'
                             Text        = "Rafrechir la liste a chaque changement d'onglet"
                             Dock        = 'Fill'
-                            Checked     = $True
+                            Checked     = $false
+                            Enabled     = $false
                             Events      = @{}
                         },
                         @{  ControlType = 'ComboBox'
