@@ -89,7 +89,7 @@ function New-WinForm () {
         $Script:Modules = $Script:Modules | Sort-Object -Unique
         foreach ($Module in $Script:Modules){
             try {
-                Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Verbose:$false -Force
+                Import-module $Module -Scope Global -SkipEditionCheck -DisableNameChecking -ea Stop -Force -Verbose:$false
             } catch {
                 Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
             }

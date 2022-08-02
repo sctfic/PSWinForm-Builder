@@ -109,7 +109,8 @@ function Update-TreeView {
         $treeNode,
         [scriptblock]$ChildrenScriptBlock = $null,
         $Depth = 1,
-        [switch]$Clear
+        [switch]$Clear,
+        [switch]$Expand
     )
     begin {
         if ($Clear) {
@@ -117,22 +118,34 @@ function Update-TreeView {
         }
     }
     process {
-
         foreach($item in $Items){
-            $childNode = [System.Windows.Forms.TreeNode]@{
-                'Text'        = $(if($Item.Name) {$Item.Name} else {$Item})
-                'Tag'         = $(if($Item.Handler) {$Item.Handler} else {$null})
-                'ForeColor'   = $(if($Item.ForeColor -is [system.Drawing.Color]) {$Item.ForeColor} else {[system.Drawing.Color]::Black})
-                'BackColor'   = $(if($Item.BackColor -is [system.Drawing.Color]) {$Item.BackColor} else {[system.Drawing.Color]::White})
-                'ToolTipText' = $(if($Item.Infos) {$Item.Infos} else {$null})
+            try {
+                Write-Color $Item.Name,$Item.Handler
+                $childNode = [System.Windows.Forms.TreeNode]@{
+                    'Text'        = $(if($Item.Name) {$Item.Name} else {$Item})
+                    'Tag'         = $(if($Item.Handler) {$Item.Handler} else {$null})
+                    'ForeColor'   = $(if($Item.ForeColor -is [system.Drawing.Color]) {$Item.ForeColor} else {[system.Drawing.Color]::Black})
+                    'BackColor'   = $(if($Item.BackColor -is [system.Drawing.Color]) {$Item.BackColor} else {[system.Drawing.Color]::White})
+                    'ToolTipText' = $(if($Item.Infos) {$Item.Infos} elseif($Item.Handler) {$Item.Handler} else {$null})
+                }
+                [System.Void]$treeNode.Nodes.Add($childNode)
+            } catch {
+                Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
             }
             if ($depth -gt 0 -and $ChildrenScriptBlock) {
+                # Write-Object $item -fore Blue
                 Invoke-Command -ScriptBlock $ChildrenScriptBlock -ArgumentList $item -ea SilentlyContinue | Update-TreeView -treeNode $childNode -ChildrenScriptBlock $ChildrenScriptBlock -Depth ($Depth-1)
             }
-            [System.Void]$treeNode.Nodes.Add($childNode)
         }
     }
     end {
+        if ($expand) {
+            try {
+                $treeNode.ExpandAll()
+            } catch {
+                Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" "", $_ error
+            }
+        }
         $treeNode
     }
 }
