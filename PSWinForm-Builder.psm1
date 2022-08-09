@@ -48,16 +48,7 @@ $Plus=[char]9500
 $Space=[char]9472
 $Last=[char]9492
 
-# class ThreadScriptBlock {
-#     # Optionally, add attributes to prevent invalid values
-#     [string]$Name
-#     [ScriptBlock]$ScriptBlock
-#     ThreadScriptBlock( $ScriptBlock) { # [ThreadScriptBlock]::new('xxx',{return 123})
-#     #    $this.Name = $Name
-#        $this.ScriptBlock = $ScriptBlock
-#     }
-# }
-
+$PSModuleAutoloadingPreference = 1
 
 function New-WinForm () {
     param(
@@ -103,7 +94,7 @@ function New-WinForm () {
         $Script:ThreadEventHandler = @{}
         
         if ($FormDef.ControlType -and $FormDef.ControlType -ne 'Form') {
-            throw "[$($FormDef.ControlType)] n'est pas valide au 1er niveau. Le 1er controler doit etre de type [From] ou omis"
+            throw "[$($FormDef.ControlType)] n'est pas valide au 1er niveau. Le 1er controler doit etre de type [From] ou sans 'ControlType'"
         } else {
             Write-Verbose "[Form]"
             # Write-LogStep '[Form]',"" ok

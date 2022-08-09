@@ -12,7 +12,7 @@
 RootModule = 'PSWinForm-Builder.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.2.01'
+ModuleVersion = '0.1.2.03'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -51,7 +51,7 @@ Description = "PSWinForm-Builder is a PowerShell module to load a Windows.Forms 
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
-# RequiredModules = @()
+RequiredModules = @('Microsoft.PowerShell.Utility')
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()

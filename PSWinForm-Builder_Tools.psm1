@@ -120,7 +120,7 @@ function Update-TreeView {
     process {
         foreach($item in $Items){
             try {
-                Write-Color $Item.Name,$Item.Handler
+                # Write-Color $Item.Name,' - ',$Item.Handler -ForeGroundColor Cyan,Yellow,Magenta
                 $childNode = [System.Windows.Forms.TreeNode]@{
                     'Text'        = $(if($Item.Name) {$Item.Name} else {$Item})
                     'Tag'         = $(if($Item.Handler) {$Item.Handler} else {$null})
