@@ -167,6 +167,7 @@ function Update-ListView {
                     Caption = 'Caption'
                     Status  = if((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%'){'Warn'} # defini la couleur si commance par : Warn, Info, Title
                     Shadow  = $false # gris clair
+                    Tag = $_.DN
                 }
         .EXAMPLE
             [PSCustomObject]@{
@@ -176,6 +177,7 @@ function Update-ListView {
                     Caption = 'Caption'
                     Status  = if((ping $_.IPv4Address -ports 0 -loop 1).status -ne '100%'){'Warn'} # defini la couleur si commance par : Warn, Info, Title
                     Shadow  = $false # gris clair
+                    Tag = $_.DN
                 } | Update-StdListView -listView $this
         .NOTES
         #>
@@ -196,6 +198,9 @@ function Update-ListView {
                     if ($Item.NextValues) {
                         $NewLine.SubItems.AddRange([string[]]$Item.NextValues) | out-null
                     }
+                    if ($item.Tag) {
+                        $NewLine.Tag = $Item.Tag
+                    }
                     # $NewLine.SubItems.AddRange("$($Item.Value)") | out-null
                     # $NewLine.SubItems.Add("$($Item.Detail)") | out-null
                     # $NewLine.group = $item.group
@@ -203,6 +208,7 @@ function Update-ListView {
                         $Grp = $ListView.Groups | Where-Object { $_.Header -like $Item.Group }
                         if (!$grp) {
                             $Grp = [System.Windows.Forms.ListViewGroup]@{ 'Header' = $Item.Group }
+                            $Grp.CollapsedState   = 1 + $($item.group -eq 'Others')
                             $ListView.Groups.Add($Grp)
                         }
                         $NewLine.group = $Grp
