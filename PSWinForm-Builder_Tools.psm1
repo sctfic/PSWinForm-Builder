@@ -221,6 +221,7 @@ function Update-ListView {
                     if ($Item.Shadow) { $NewLine.foreColor = [System.Drawing.Color]::Gray }
                 } catch {
                     $item | Write-Object -back black -fore red
+                    $ListView | Write-Object -PassThru -foreGroundColor DarkRed
                     Write-LogStep -prefix "L.$($_.InvocationInfo.ScriptLineNumber)" '', $_ Error
                 }
                 # $l++
