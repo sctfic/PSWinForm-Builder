@@ -187,7 +187,7 @@ function Update-ListView {
         $ListView
     )
     begin {
-        # $ListView.BeginUpdate() # SuspendLayout()
+        $ListView.BeginUpdate() # SuspendLayout()
     }
     process {
         foreach ($item in $items) {
@@ -231,6 +231,8 @@ function Update-ListView {
     }
     end {
         $ListView.EndUpdate() # ResumeLayout()
+        $ListView.Enabled = $true
+
         # Write-logstep $ListView.FirstColValue,"$l Line Added" ok
     }
 }
